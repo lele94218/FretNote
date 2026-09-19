@@ -65,7 +65,7 @@ final class PracticeTests: XCTestCase {
         let store = PracticeStore(file: folder.appendingPathComponent("progress.json"))
         XCTAssertEqual(store.lowerFret, 1)
         XCTAssertEqual(store.upperFret, 4)
-        for lower in 1...12 {
+        for lower in 1...18 {
             store.lowerFret = lower
             XCTAssertEqual(store.upperFret, lower + 3)
             store.mode = .melody
@@ -73,6 +73,18 @@ final class PracticeTests: XCTestCase {
             XCTAssertTrue(store.notes.allSatisfy { (lower...(lower + 3)).contains($0.fret) })
             store.end()
         }
+        store.customRange = true
+        store.lowerFret = 21
+        store.upperFret = 24
+        XCTAssertEqual(store.upperFret, 21)
+        store.naturalsOnly = false
+        store.start()
+        XCTAssertFalse(store.notes.isEmpty)
+        XCTAssertTrue(store.notes.allSatisfy { $0.fret == 21 })
+        store.end()
+        store.customRange = false
+        XCTAssertEqual(store.lowerFret, 18)
+        XCTAssertEqual(store.upperFret, 21)
         store.customRange = true
         store.lowerFret = 0
         store.upperFret = 5

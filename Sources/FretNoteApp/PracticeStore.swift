@@ -3,21 +3,26 @@ import FretNoteCore
 
 @MainActor
 final class PracticeStore: ObservableObject {
+    static let maximumFret = 21
     @Published var mode: PracticeMode = .names
     @Published var string = 1
     @Published var lowerFret = 1 {
-        didSet { customUpperFret = min(max(customUpperFret, lowerFret), min(17, lowerFret + 5)) }
+        didSet {
+            let bounded = min(max(customRange ? 0 : 1, lowerFret), customRange ? Self.maximumFret : Self.maximumFret - 3)
+            if lowerFret != bounded { lowerFret = bounded }
+            customUpperFret = min(max(customUpperFret, lowerFret), min(Self.maximumFret, lowerFret + 5))
+        }
     }
     @Published var customRange = false {
         didSet {
-            if !customRange && lowerFret == 0 { lowerFret = 1 }
-            customUpperFret = lowerFret + 3
+            if !customRange { lowerFret = min(max(1, lowerFret), Self.maximumFret - 3) }
+            customUpperFret = min(Self.maximumFret, lowerFret + 3)
         }
     }
     @Published private var customUpperFret = 4
     var upperFret: Int {
         get { customRange ? customUpperFret : lowerFret + 3 }
-        set { customUpperFret = min(max(newValue, lowerFret), min(17, lowerFret + 5)) }
+        set { customUpperFret = min(max(newValue, lowerFret), min(Self.maximumFret, lowerFret + 5)) }
     }
     @Published var naturalsOnly = true
     @Published var showNames = true
@@ -47,7 +52,7 @@ final class PracticeStore: ObservableObject {
     var weakNotes: [(note: GuitarNote, score: NoteProgress)] {
         progress.compactMap { key, value -> (note: GuitarNote, score: NoteProgress)? in
             let parts = key.split(separator: ":").compactMap { Int($0) }
-            guard parts.count == 2, (1...6).contains(parts[0]), (0...24).contains(parts[1]) else { return nil }
+            guard parts.count == 2, (1...6).contains(parts[0]), (0...Self.maximumFret).contains(parts[1]) else { return nil }
             return (GuitarNote(string: parts[0], fret: parts[1]), value)
         }.sorted { $0.score.weight(at: Date()) > $1.score.weight(at: Date()) }
     }

@@ -110,7 +110,7 @@ struct FretboardView: View {
     @Environment(\.interfaceScale) private var scale
     private var palette: AppPalette { AppPalette(scheme: colorScheme, contrast: contrast) }
     private var firstFret: Int { max(0, lower - 1) }
-    private var lastFret: Int { min(24, upper + 1) }
+    private var lastFret: Int { min(PracticeStore.maximumFret, upper + 1) }
     private let tuning = ["E4", "B3", "G3", "D3", "A2", "E2"]
     private func fretWidth(_ fret: Int) -> CGFloat {
         fret == 0 ? 40 : 72 * pow(2, -Double(fret - 1) / 12)
