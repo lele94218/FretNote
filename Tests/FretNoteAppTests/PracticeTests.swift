@@ -79,7 +79,7 @@ final class PracticeTests: XCTestCase {
             ("空弦提示", .melody, 0, 5, true),
             ("高把位提示", .melody, 12, 17, true)
         ]
-        for width in [1040.0, 1600.0] {
+        for (width, height) in [(1040.0, 740.0), (1160.0, 820.0), (1600.0, 900.0)] {
         for (theme, scale) in [(AppTheme.light, 1.25), (.dark, 1.25), (.light, 1.75), (.dark, 1.75)] {
         appearance.theme = theme; appearance.setFontScale(scale)
         for (name, mode, lower, upper, hint) in scenes {
@@ -93,14 +93,22 @@ final class PracticeTests: XCTestCase {
                 .environmentObject(appearance)
                 .environment(\.interfaceScale, scale)
                 .preferredColorScheme(theme.colorScheme)
-                .frame(width: width, height: 820)
+                .frame(width: width, height: height)
             let host = NSHostingView(rootView: view)
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: width, height: 820), styleMask: [.borderless], backing: .buffered, defer: false)
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: width, height: height), styleMask: [.borderless], backing: .buffered, defer: false)
             window.appearance = NSAppearance(named: theme == .dark ? .darkAqua : .aqua)
             window.contentView = host
             window.orderFront(nil)
             try await Task.sleep(nanoseconds: 300_000_000)
             host.layoutSubtreeIfNeeded()
+            func checkNoScrolling(_ view: NSView) {
+                if let scroll = view as? NSScrollView, let document = scroll.documentView {
+                    XCTAssertLessThanOrEqual(document.frame.height, scroll.contentView.bounds.height + 1,
+                                             "Content must fit without vertical scrolling at \(width)×\(height), \(scale)")
+                }
+                view.subviews.forEach(checkNoScrolling)
+            }
+            checkNoScrolling(host)
             let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
             host.cacheDisplay(in: host.bounds, to: bitmap)
             let data = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
@@ -141,12 +149,13 @@ final class PracticeTests: XCTestCase {
         }
         audio.running = false
         store.active = false
-        let settings = AppSettingsView(audio: audio)
+        for tab in [0, 1] {
+        let settings = AppSettingsView(audio: audio, initialTab: tab)
             .environmentObject(appearance)
             .environment(\.interfaceScale, scale)
             .preferredColorScheme(theme.colorScheme)
         let settingsHost = NSHostingView(rootView: settings)
-        settingsHost.frame = NSRect(x: 0, y: 0, width: 560, height: 640)
+        settingsHost.frame = NSRect(x: 0, y: 0, width: 620, height: 580)
         let settingsWindow = NSWindow(contentRect: settingsHost.frame, styleMask: [.borderless], backing: .buffered, defer: false)
         settingsWindow.appearance = NSAppearance(named: theme == .dark ? .darkAqua : .aqua)
         settingsWindow.contentView = settingsHost
@@ -155,8 +164,9 @@ final class PracticeTests: XCTestCase {
         settingsHost.layoutSubtreeIfNeeded()
         let settingsBitmap = try XCTUnwrap(settingsHost.bitmapImageRepForCachingDisplay(in: settingsHost.bounds))
         settingsHost.cacheDisplay(in: settingsHost.bounds, to: settingsBitmap)
-        try XCTUnwrap(settingsBitmap.representation(using: .png, properties: [:])).write(to: folder.appendingPathComponent("设置-\(theme.rawValue)-\(Int(scale * 100)).png"))
+        try XCTUnwrap(settingsBitmap.representation(using: .png, properties: [:])).write(to: folder.appendingPathComponent("设置-\(tab)-\(theme.rawValue)-\(Int(scale * 100)).png"))
         settingsWindow.orderOut(nil)
+        }
         }
         }
     }

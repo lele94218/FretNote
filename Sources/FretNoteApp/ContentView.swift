@@ -12,10 +12,12 @@ struct ContentView: View {
     private var rule: Color { palette.rule }
     @ObservedObject var audio: AudioInput
     @ObservedObject var practice: PracticeStore
+    @State private var showProgress = false
+    @State private var showError = false
     var body: some View {
         HSplitView {
             if appearance.sidebarVisible {
-                ScrollView { sidebar }
+                sidebar
                     .frame(minWidth: 250, idealWidth: 270, maxWidth: 330)
             }
             VStack(spacing: 0) {
@@ -31,21 +33,18 @@ struct ContentView: View {
                         .padding(.horizontal, 24).padding(.bottom, 12)
                 }
                 rule.frame(height: 1)
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
-                        if let error = audio.error {
-                            Text(error).foregroundStyle(ink).textSelection(.enabled)
-                            OpenSettingsButton()
-                        }
-                        exercise
-                        progressPanel
-                        Text("标准调弦 · A4 = 440 Hz · 音频仅在本机处理")
-                            .font(.system(size: 12 * scale)).foregroundStyle(muted)
-                        if let error = practice.persistenceError {
-                            Text(error).font(.system(size: 12 * scale)).textSelection(.enabled)
-                        }
-                    }.padding(24)
-                }
+                exercise.padding(.horizontal, 20).padding(.vertical, 12)
+                rule.frame(height: 1)
+                HStack {
+                    Text("首次正确 \(practice.accuracy) · 平均 \(practice.averageTime)")
+                        .foregroundStyle(muted)
+                    Spacer()
+                    if audio.error != nil || practice.persistenceError != nil {
+                        Button { showError = true } label: { Label("查看问题", systemImage: "exclamationmark.circle") }
+                    }
+                    Button("学习记录") { showProgress = true }
+                }.font(.system(size: 12 * scale)).buttonStyle(.bordered)
+                    .padding(.horizontal, 20).padding(.vertical, 12)
             }.frame(minWidth: 600)
         }
         .background(palette.background)
@@ -57,15 +56,25 @@ struct ContentView: View {
             NSAccessibility.post(element: NSApplication.shared, notification: .announcementRequested,
                 userInfo: [.announcement: message, .priority: NSAccessibilityPriorityLevel.medium.rawValue])
         }
+        .sheet(isPresented: $showProgress) {
+            VStack(spacing: 20) {
+                progressPanel
+                Button("完成") { showProgress = false }.keyboardShortcut(.defaultAction)
+            }.padding(24).frame(width: 440 * scale)
+                .foregroundStyle(ink).background(palette.background)
+                .preferredColorScheme(appearance.theme.colorScheme)
+        }
+        .alert("需要处理的问题", isPresented: $showError) {
+            Button("知道了", role: .cancel) {}
+        } message: {
+            Text([audio.error, practice.persistenceError].compactMap { $0 }.joined(separator: "\n\n"))
+        }
         .sheet(isPresented: $practice.showSummary) {
             summary.preferredColorScheme(appearance.theme.colorScheme)
         }
     }
     private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 28) {
-            Text("FretNote")
-                .font(.system(size: 18 * scale, weight: .semibold))
-                .padding(.top, 10)
+        VStack(alignment: .leading, spacing: 20) {
             VStack(alignment: .leading, spacing: 8) {
                 eyebrow("练习")
                 ForEach(PracticeMode.allCases) { mode in
@@ -77,7 +86,7 @@ struct ContentView: View {
                             Text(mode.rawValue).font(.system(size: 14 * scale, weight: .medium))
                             Spacer()
                             if practice.mode == mode { Text("—") }
-                        }.padding(.vertical, 10).foregroundStyle(practice.mode == mode ? ink : muted)
+                        }.padding(.vertical, 7).foregroundStyle(practice.mode == mode ? ink : muted)
                             .padding(.horizontal, 8)
                             .background(practice.mode == mode ? palette.selection : Color.clear, in: RoundedRectangle(cornerRadius: 6))
                             .contentShape(Rectangle())
@@ -85,7 +94,7 @@ struct ContentView: View {
                     .accessibilityAddTraits(practice.mode == mode ? [.isSelected] : [])
                 }
             }
-            VStack(alignment: .leading, spacing: 17) {
+            VStack(alignment: .leading, spacing: 12) {
                 eyebrow("练习范围")
                 if practice.mode != .melody {
                     ScaledPicker(title: "琴弦", selection: $practice.string, options: Array(1...6)) { "第 \($0) 弦" }
@@ -104,9 +113,10 @@ struct ContentView: View {
                 }
             }.font(.system(size: 12 * scale)).disabled(practice.active)
             Spacer()
-            Text("单音练习，不考核节奏。\n请按指定弦与把位弹奏。")
+            Text("单音 · 标准调弦")
+                .help("单音练习，不考核节奏。请按指定弦与把位弹奏；音高识别无法验证实际弦位。")
                 .font(.system(size: 12 * scale)).foregroundStyle(muted).lineSpacing(5)
-        }.padding(24)
+        }.padding(20)
     }
     private var header: some View {
         HStack(spacing: 16) {
@@ -149,43 +159,54 @@ struct ContentView: View {
         }.fixedSize()
     }
     private var exercise: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 12) {
             HStack {
                 Text(practice.mode == .melody ? "第 \(practice.lowerFret)–\(practice.upperFret) 品" : "第 \(practice.string) 弦 · \(practice.lowerFret)–\(practice.upperFret) 品")
                 Spacer()
                 Text("\(practice.answered) / 20 音").monospacedDigit()
             }.font(.system(size: 12 * scale)).foregroundStyle(muted)
-            if practice.notes.isEmpty {
-                VStack(spacing: 16) {
-                    Text("准备练习")
-                        .font(.system(size: 24 * scale, weight: .regular))
-                    Text("开启音频输入后，点击开始。每组 20 个音。")
-                        .font(.system(size: 13 * scale)).foregroundStyle(muted)
-                }.frame(height: 218 * scale)
-            } else if practice.mode == .names {
-                VStack(spacing: 8) {
-                    Text(practice.completed ? "完成" : "弹出这个音").font(.system(size: 13 * scale)).foregroundStyle(muted)
-                    Text((practice.target ?? practice.notes.last)?.name ?? "—")
-                        .font(.system(size: 86 * scale, weight: .regular)).foregroundStyle(ink)
-                    Text("第 \(practice.string) 弦").font(.system(size: 14 * scale)).foregroundStyle(muted)
-                }.frame(height: 218 * scale)
-            } else {
-                StaffView(notes: practice.notes, current: practice.index, showNames: practice.showNames)
+            GeometryReader { space in
+                let showsBoard = practice.mode == .melody || practice.hint
+                let gap: CGFloat = 12
+                let notationHeight = showsBoard ? (space.size.height - gap) * 0.53 : space.size.height
+                VStack(spacing: gap) {
+                    notation.frame(height: notationHeight)
+                    if showsBoard {
+                        FretboardView(lower: practice.lowerFret, upper: practice.upperFret,
+                                      highlightedNote: practice.hint ? practice.target : nil,
+                                      emphasizedString: practice.mode == .melody ? nil : practice.string)
+                            .frame(height: max(0, space.size.height - notationHeight - gap))
+                    }
+                }
             }
             HStack(spacing: 8) {
                 if practice.feedbackKind != 0 {
                     Image(systemName: practice.feedbackKind > 0 ? "checkmark" : "xmark")
                 }
-                Text(practice.notes.isEmpty ? "" : practice.feedback).font(.system(size: 13 * scale))
-            }.foregroundStyle(practice.feedbackKind == 0 ? muted : ink)
+                Text(practice.notes.isEmpty ? "开启输入后，点击开始练习。" : practice.feedback)
+            }.font(.system(size: 13 * scale))
+                .foregroundStyle(practice.feedbackKind == 0 ? muted : ink)
                 .frame(minHeight: 22 * scale)
-            if practice.mode == .melody || practice.hint {
-                FretboardView(lower: practice.lowerFret, upper: practice.upperFret,
-                              highlightedNote: practice.hint ? practice.target : nil,
-                              emphasizedString: practice.mode == .melody ? nil : practice.string)
+        }
+    }
+    private var notation: some View {
+        Group {
+            if practice.notes.isEmpty {
+                VStack(spacing: 12) {
+                    Text("准备练习").font(.system(size: 24 * scale))
+                    Text("每组 20 个音").font(.system(size: 13 * scale)).foregroundStyle(muted)
+                }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if practice.mode == .names {
+                VStack(spacing: 8) {
+                    Text(practice.completed ? "完成" : "弹出这个音").font(.system(size: 13 * scale)).foregroundStyle(muted)
+                    Text((practice.target ?? practice.notes.last)?.name ?? "—")
+                        .font(.system(size: 72 * scale)).minimumScaleFactor(0.5)
+                    Text("第 \(practice.string) 弦").font(.system(size: 14 * scale)).foregroundStyle(muted)
+                }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                StaffView(notes: practice.notes, current: practice.index, showNames: practice.showNames)
             }
-        }.padding(.top, 8).padding(.bottom, 24)
-            .overlay(alignment: .bottom) { rule.frame(height: 1) }
+        }
     }
     private var progressPanel: some View {
         VStack(alignment: .leading, spacing: 17) {

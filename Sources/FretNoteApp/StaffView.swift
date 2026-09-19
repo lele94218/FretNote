@@ -1,43 +1,18 @@
 import SwiftUI
 import FretNoteCore
 
-/// Drawing dimensions depend on notation and text size, never on the window width.
-/// Extra room becomes margins; a narrow viewport scrolls horizontally.
+/// Fit drawings uniformly into their allotted space; never stretch or scroll them.
 struct FixedDiagram<Content: View>: View {
     let size: CGSize
-    var focusX: CGFloat? = nil
     @ViewBuilder let content: () -> Content
-    @Environment(\.interfaceScale) private var scale
     var body: some View {
         GeometryReader { viewport in
-            VStack(spacing: 0) {
-                ScrollViewReader { proxy in
-                    ScrollView(.horizontal) {
-                        content()
-                            .frame(width: size.width, height: size.height)
-                            .overlay(alignment: .topLeading) {
-                                if let focusX {
-                                    HStack(spacing: 0) {
-                                        Color.clear.frame(width: max(0, focusX), height: 1)
-                                        Color.clear.frame(width: 1, height: 1).id("current-target")
-                                        Spacer(minLength: 0)
-                                    }.allowsHitTesting(false).accessibilityHidden(true)
-                                }
-                            }
-                            .frame(minWidth: viewport.size.width)
-                    }
-                    .onAppear { proxy.scrollTo("current-target", anchor: .center) }
-                    .onChange(of: focusX) { _ in proxy.scrollTo("current-target", anchor: .center) }
-                    .onChange(of: viewport.size.width) { _ in proxy.scrollTo("current-target", anchor: .center) }
-                }
-                .frame(height: size.height)
-                if viewport.size.width < size.width {
-                    Text("← 左右滚动查看 →")
-                        .font(.system(size: 11 * scale)).foregroundStyle(.secondary)
-                }
-            }
+            let factor = min(viewport.size.width / size.width, viewport.size.height / size.height)
+            content()
+                .frame(width: size.width, height: size.height)
+                .scaleEffect(max(0, factor))
+                .frame(width: viewport.size.width, height: viewport.size.height)
         }
-        .frame(height: size.height + 20 * scale)
     }
 }
 
@@ -57,8 +32,7 @@ struct StaffView: View {
     private var height: CGFloat { labelY + (showNames ? 22 : 8) }
 
     var body: some View {
-        FixedDiagram(size: CGSize(width: width * scale, height: height * scale),
-                     focusX: ((notes.count == 1 ? 170 : 140) + CGFloat(min(current, max(0, notes.count - 1))) * 72) * scale) {
+        FixedDiagram(size: CGSize(width: width * scale, height: height * scale)) {
             Canvas { context, _ in
                 context.scaleBy(x: scale, y: scale)
                 let ink = palette.ink
@@ -159,11 +133,7 @@ struct FretboardView: View {
                 VStack(alignment: .leading, spacing: 5) { rangeLabel; hintLabel }
             }
             .font(.system(size: 12 * scale)).foregroundStyle(palette.muted)
-            FixedDiagram(size: CGSize(width: (right + 14) * scale, height: 140 * scale),
-                         focusX: highlightedNote.flatMap { note in
-                             guard (firstFret...lastFret).contains(note.fret) else { return nil }
-                             return (fretLeft(note.fret) + fretWidth(note.fret) / 2) * scale
-                         }) {
+            FixedDiagram(size: CGSize(width: (right + 14) * scale, height: 140 * scale)) {
                 Canvas { context, _ in
                     context.scaleBy(x: scale, y: scale)
                     let ink = palette.ink

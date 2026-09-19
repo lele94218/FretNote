@@ -12,17 +12,28 @@ struct AppSettingsView: View {
     private var ink: Color { palette.ink }
     private var muted: Color { palette.muted }
     private var rule: Color { palette.rule }
+    @State private var selectedTab: Int
+    init(audio: AudioInput, initialTab: Int = 0) {
+        self.audio = audio
+        _selectedTab = State(initialValue: initialTab)
+    }
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                Text("设置").font(.system(size: 22 * scale, weight: .medium))
+        TabView(selection: $selectedTab) {
+            VStack(alignment: .leading, spacing: 20) {
                 appearanceControls
+                Text("文字按所选字号显示；谱表和指板等比例适应窗口。")
+                    .foregroundStyle(muted)
+                Spacer()
+            }.padding(20).tabItem { Label("外观", systemImage: "textformat.size") }.tag(0)
+            VStack {
                 inputPanel
-            }.padding(28)
+                Spacer(minLength: 0)
+            }.padding(20).tabItem { Label("音频", systemImage: "waveform") }.tag(1)
         }
-        .frame(width: 560, height: 640)
+        .padding(20)
+        .frame(width: 620, height: 580)
         .font(.system(size: 13 * scale))
-        .foregroundStyle(ink).background(palette.background).tint(ink)
+        .background(palette.background)
     }
     private func eyebrow(_ text: String) -> some View { Text(text).font(.system(size: 12 * scale, weight: .medium)).foregroundStyle(muted) }
     private var appearanceControls: some View {
@@ -88,7 +99,7 @@ struct AppSettingsView: View {
             Text("使用干净音色；重复同音时，轻闷弦再拨。噪声门在停止监听后调整。")
                 .font(.system(size: 12 * scale)).foregroundStyle(muted).lineSpacing(3)
             if let error = audio.error {
-                Text(error).font(.system(size: 12 * scale)).foregroundStyle(ink).textSelection(.enabled)
+                Text(error).font(.system(size: 12 * scale)).foregroundStyle(ink).lineLimit(2).help(error).textSelection(.enabled)
                 if AVCaptureDevice.authorizationStatus(for: .audio) == .denied { Button("打开麦克风权限设置") { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")!) }.font(.system(size: 12 * scale)) }
             }
         }.buttonStyle(.bordered).controlSize(.large)
