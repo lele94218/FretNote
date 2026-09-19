@@ -79,6 +79,7 @@ final class PracticeTests: XCTestCase {
             ("空弦提示", .melody, 0, 5, true),
             ("高把位提示", .melody, 12, 17, true)
         ]
+        for width in [1040.0, 1600.0] {
         for (theme, scale) in [(AppTheme.light, 1.25), (.dark, 1.25), (.light, 1.75), (.dark, 1.75)] {
         appearance.theme = theme; appearance.setFontScale(scale)
         for (name, mode, lower, upper, hint) in scenes {
@@ -89,9 +90,9 @@ final class PracticeTests: XCTestCase {
                 .environmentObject(appearance)
                 .environment(\.interfaceScale, scale)
                 .preferredColorScheme(theme.colorScheme)
-                .frame(width: 1160, height: 820)
+                .frame(width: width, height: 1000)
             let host = NSHostingView(rootView: view)
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1160, height: 820), styleMask: [.borderless], backing: .buffered, defer: false)
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: width, height: 1000), styleMask: [.borderless], backing: .buffered, defer: false)
             window.appearance = NSAppearance(named: theme == .dark ? .darkAqua : .aqua)
             window.contentView = host
             window.orderFront(nil)
@@ -100,8 +101,9 @@ final class PracticeTests: XCTestCase {
             let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
             host.cacheDisplay(in: host.bounds, to: bitmap)
             let data = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
-            try data.write(to: folder.appendingPathComponent("\(name)-\(theme.rawValue)-\(Int(scale * 100)).png"))
+            try data.write(to: folder.appendingPathComponent("\(name)-\(theme.rawValue)-\(Int(scale * 100))-w\(Int(width)).png"))
             window.orderOut(nil)
+        }
         }
         }
     }

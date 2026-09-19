@@ -76,10 +76,10 @@ struct ContentView: View {
                     Text("品位").foregroundStyle(muted).fixedSize()
                     Spacer()
                     ScaledPicker(selection: $practice.lowerFret, options: Array(0...12)) { "\($0)" }
-                        .accessibilityLabel("起始品").frame(width: 56 * scale)
+                        .accessibilityLabel("起始品")
                     Text("–").foregroundStyle(muted)
                     ScaledPicker(selection: $practice.upperFret, options: Array(practice.lowerFret...min(17, practice.lowerFret + 5))) { "\($0)" }
-                        .accessibilityLabel("结束品").frame(width: 56 * scale)
+                        .accessibilityLabel("结束品")
                 }
                 .onChange(of: practice.lowerFret) { value in practice.upperFret = min(max(practice.upperFret, value), value + 5) }
                 Toggle("只练自然音", isOn: $practice.naturalsOnly).toggleStyle(.checkbox).controlSize(.large)
@@ -142,7 +142,6 @@ struct ContentView: View {
                 }.frame(height: 218 * scale)
             } else {
                 StaffView(notes: practice.notes, current: practice.index, showNames: practice.showNames)
-                    .frame(height: (practice.mode == .melody ? 176 : 218) * scale)
             }
             HStack(spacing: 8) {
                 if practice.feedbackKind != 0 {
@@ -155,7 +154,6 @@ struct ContentView: View {
                 FretboardView(lower: practice.lowerFret, upper: practice.upperFret,
                               highlightedNote: practice.hint ? practice.target : nil,
                               emphasizedString: practice.mode == .melody ? nil : practice.string)
-                    .frame(maxWidth: 680 * scale)
             }
             Rectangle().fill(rule).frame(height: 1)
             HStack {
@@ -307,21 +305,31 @@ private struct ScaledPicker<Value: Hashable>: View {
     @Environment(\.interfaceScale) private var scale
     @Environment(\.isEnabled) private var enabled
     private var palette: AppPalette { AppPalette(scheme: colorScheme) }
+    private var menuWidth: CGFloat {
+        let font = NSFont.systemFont(ofSize: 12 * scale)
+        let widest = options.map { (label($0) as NSString).size(withAttributes: [.font: font]).width }.max() ?? 0
+        return ceil(widest) + 12 * scale + 31
+    }
+    private var menuHeight: CGFloat {
+        let font = NSFont.systemFont(ofSize: 12 * scale)
+        let lineHeight = ceil(font.ascender - font.descender + font.leading)
+        return min(400, CGFloat(options.count) * (lineHeight + 10) + CGFloat(max(0, options.count - 1)) * 2 + 8)
+    }
     var body: some View {
         HStack(spacing: 8) {
             if let title { Text(title).fixedSize() }
             Button { expanded.toggle() } label: {
                 HStack(spacing: 8) {
                     Text(label(selection)).lineLimit(1)
-                    Spacer(minLength: 0)
                     Image(systemName: "chevron.down").font(.system(size: 9 * scale))
                 }
-                .padding(.horizontal, 8).padding(.vertical, 6)
+                .padding(.horizontal, 7).padding(.vertical, 4)
                 .foregroundStyle(palette.ink)
                 .background(palette.selection)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .fixedSize(horizontal: true, vertical: false)
             .accessibilityValue(label(selection))
             .popover(isPresented: $expanded, arrowEdge: .bottom) {
                 ScrollView {
@@ -331,21 +339,21 @@ private struct ScaledPicker<Value: Hashable>: View {
                                 selection = option
                                 expanded = false
                             } label: {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "checkmark").opacity(option == selection ? 1 : 0)
+                                HStack(spacing: 7) {
+                                    Image(systemName: "checkmark")
+                                        .frame(width: 12 * scale).opacity(option == selection ? 1 : 0)
                                     Text(label(option)).fixedSize()
                                     Spacer(minLength: 0)
                                 }
-                                .padding(10)
+                                .padding(.horizontal, 8).padding(.vertical, 5)
                                 .contentShape(Rectangle())
                             }.buttonStyle(.plain)
                         }
-                    }.padding(6)
+                    }.padding(4)
                 }
                 .font(.system(size: 12 * scale))
                 .foregroundStyle(palette.ink).background(palette.background)
-                .frame(width: max(180, CGFloat(options.map { label($0).count }.max() ?? 8) * 12 + 70) * scale,
-                       height: min(440, CGFloat(options.count) * (22 * scale + 22) + 12))
+                .frame(width: menuWidth, height: menuHeight)
                 .preferredColorScheme(colorScheme)
             }
         }
