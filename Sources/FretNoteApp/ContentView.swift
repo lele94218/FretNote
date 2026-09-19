@@ -189,7 +189,7 @@ struct ContentView: View {
                 Text("\(practice.answered) / 20 音").monospacedDigit()
             }.font(.system(size: 12 * scale)).foregroundStyle(muted)
             GeometryReader { space in
-                let showsBoard = practice.mode == .melody || practice.hint
+                let showsBoard = practice.mode != .names || practice.hint
                 let gap: CGFloat = 12
                 let notationHeight = showsBoard ? (space.size.height - gap) * 0.53 : space.size.height
                 VStack(spacing: gap) {
