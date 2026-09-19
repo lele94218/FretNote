@@ -100,8 +100,8 @@ struct ContentView: View {
                     ScaledPicker(title: "琴弦", selection: $practice.string, options: Array(1...6)) { "第 \($0) 弦" }
                 }
                 VStack(spacing: 12) {
-                    HStack { Text("起始品"); Spacer(); ScaledPicker(accessibilityName: "起始品", selection: $practice.lowerFret, options: Array(0...12)) { "\($0)" }.accessibilityLabel("起始品") }
-                    HStack { Text("结束品"); Spacer(); ScaledPicker(accessibilityName: "结束品", selection: $practice.upperFret, options: Array(practice.lowerFret...min(17, practice.lowerFret + 5))) { "\($0)" }.accessibilityLabel("结束品") }
+                    HStack { Text("起始品"); Spacer(); ScaledPicker(accessibilityName: "起始品", controlWidth: 72, selection: $practice.lowerFret, options: Array(0...12)) { "\($0)" }.accessibilityLabel("起始品") }
+                    HStack { Text("结束品"); Spacer(); ScaledPicker(accessibilityName: "结束品", controlWidth: 72, selection: $practice.upperFret, options: Array(practice.lowerFret...min(17, practice.lowerFret + 5))) { "\($0)" }.accessibilityLabel("结束品") }
                 }
                 .onChange(of: practice.lowerFret) { value in practice.upperFret = min(max(practice.upperFret, value), value + 5) }
                 Toggle("只练自然音", isOn: $practice.naturalsOnly).toggleStyle(.checkbox).controlSize(.large)
@@ -258,6 +258,7 @@ struct ContentView: View {
 struct ScaledPicker<Value: Hashable>: View {
     var title: String? = nil
     var accessibilityName: String? = nil
+    var controlWidth: CGFloat? = nil
     @Binding var selection: Value
     let options: [Value]
     let label: (Value) -> String
@@ -265,7 +266,7 @@ struct ScaledPicker<Value: Hashable>: View {
     var body: some View {
         HStack(spacing: 8) {
             if let title { Text(title).fixedSize() }
-            NativeChoicePicker(selection: $selection, options: options, label: label, accessibilityTitle: accessibilityName ?? title ?? label(selection))
+            NativeChoicePicker(selection: $selection, options: options, label: label, accessibilityTitle: accessibilityName ?? title ?? label(selection), controlWidth: controlWidth)
                 .fixedSize()
                 .accessibilityLabel(title ?? label(selection))
         }

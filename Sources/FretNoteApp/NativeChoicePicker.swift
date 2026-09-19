@@ -5,6 +5,7 @@ struct NativeChoicePicker<Value: Hashable>: NSViewRepresentable {
     let options: [Value]
     let label: (Value) -> String
     var accessibilityTitle: String = ""
+    var controlWidth: CGFloat? = nil
     @Environment(\.interfaceScale) private var scale
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.isEnabled) private var enabled
@@ -50,6 +51,11 @@ struct NativeChoicePicker<Value: Hashable>: NSViewRepresentable {
         button.appearance = NSAppearance(named: colorScheme == .dark ? .darkAqua : .aqua)
         button.sizeToFit()
         button.invalidateIntrinsicContentSize()
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: NSPopUpButton, context: Context) -> CGSize? {
+        guard let controlWidth else { return nil }
+        return CGSize(width: controlWidth * scale, height: nsView.intrinsicContentSize.height)
     }
 
     final class Coordinator: NSObject {
