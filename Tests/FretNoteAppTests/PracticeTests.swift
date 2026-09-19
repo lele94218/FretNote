@@ -102,6 +102,29 @@ final class PracticeTests: XCTestCase {
             host.cacheDisplay(in: host.bounds, to: bitmap)
             let data = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
             try data.write(to: folder.appendingPathComponent("\(name)-\(theme.rawValue)-\(Int(scale * 100))-w\(Int(width)).png"))
+            if ProcessInfo.processInfo.environment["FRETNOTE_CAPTURE_MENU"] == "1",
+               name == "音名找音", theme == .dark, scale == 1.25, width == 1040 {
+                func findPicker(_ view: NSView) -> NSPopUpButton? {
+                    if let picker = view as? NSPopUpButton,
+                       picker.itemTitles == (0...12).map({ "\($0)" }) { return picker }
+                    return view.subviews.compactMap { findPicker($0) }.first
+                }
+                let picker = try XCTUnwrap(findPicker(host))
+                let timer = Timer(timeInterval: 0.6, repeats: false) { _ in
+                    for (index, menuWindow) in NSApp.windows.enumerated() where menuWindow != window && menuWindow.isVisible {
+                        guard let content = menuWindow.contentView,
+                              let bitmap = content.bitmapImageRepForCachingDisplay(in: content.bounds) else { continue }
+                        content.cacheDisplay(in: content.bounds, to: bitmap)
+                        if let data = bitmap.representation(using: .png, properties: [:]) {
+                            try? data.write(to: folder.appendingPathComponent("native-menu-\(index).png"))
+                        }
+                    }
+                    picker.menu?.cancelTrackingWithoutAnimation()
+                }
+                RunLoop.main.add(timer, forMode: .common)
+                picker.performClick(nil)
+                timer.invalidate()
+            }
             window.orderOut(nil)
         }
         }

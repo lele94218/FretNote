@@ -294,71 +294,20 @@ private struct MonoButtonStyle: ButtonStyle {
 }
 
 
-/// A scalable choice control; native macOS popup labels ignore custom font sizes.
+/// AppKit pop-up menus provide standard selection, keyboard navigation and dismissal.
 private struct ScaledPicker<Value: Hashable>: View {
     var title: String? = nil
     @Binding var selection: Value
     let options: [Value]
     let label: (Value) -> String
-    @State private var expanded = false
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.interfaceScale) private var scale
-    @Environment(\.isEnabled) private var enabled
-    private var palette: AppPalette { AppPalette(scheme: colorScheme) }
-    private var menuWidth: CGFloat {
-        let font = NSFont.systemFont(ofSize: 12 * scale)
-        let widest = options.map { (label($0) as NSString).size(withAttributes: [.font: font]).width }.max() ?? 0
-        return ceil(widest) + 12 * scale + 31
-    }
-    private var menuHeight: CGFloat {
-        let font = NSFont.systemFont(ofSize: 12 * scale)
-        let lineHeight = ceil(font.ascender - font.descender + font.leading)
-        return min(400, CGFloat(options.count) * (lineHeight + 10) + CGFloat(max(0, options.count - 1)) * 2 + 8)
-    }
     var body: some View {
         HStack(spacing: 8) {
             if let title { Text(title).fixedSize() }
-            Button { expanded.toggle() } label: {
-                HStack(spacing: 8) {
-                    Text(label(selection)).lineLimit(1)
-                    Image(systemName: "chevron.down").font(.system(size: 9 * scale))
-                }
-                .padding(.horizontal, 7).padding(.vertical, 4)
-                .foregroundStyle(palette.ink)
-                .background(palette.selection)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .fixedSize(horizontal: true, vertical: false)
-            .accessibilityValue(label(selection))
-            .popover(isPresented: $expanded, arrowEdge: .bottom) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 2) {
-                        ForEach(options, id: \.self) { option in
-                            Button {
-                                selection = option
-                                expanded = false
-                            } label: {
-                                HStack(spacing: 7) {
-                                    Image(systemName: "checkmark")
-                                        .frame(width: 12 * scale).opacity(option == selection ? 1 : 0)
-                                    Text(label(option)).fixedSize()
-                                    Spacer(minLength: 0)
-                                }
-                                .padding(.horizontal, 8).padding(.vertical, 5)
-                                .contentShape(Rectangle())
-                            }.buttonStyle(.plain)
-                        }
-                    }.padding(4)
-                }
-                .font(.system(size: 12 * scale))
-                .foregroundStyle(palette.ink).background(palette.background)
-                .frame(width: menuWidth, height: menuHeight)
-                .preferredColorScheme(colorScheme)
-            }
+            NativeChoicePicker(selection: $selection, options: options, label: label)
+                .fixedSize()
+                .accessibilityLabel(title ?? label(selection))
         }
         .font(.system(size: 12 * scale))
-        .opacity(enabled ? 1 : 0.4)
-        .onChange(of: enabled) { if !$0 { expanded = false } }
     }
 }
