@@ -24,12 +24,20 @@ struct StaffView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.interfaceScale) private var scale
     private var palette: AppPalette { AppPalette(scheme: colorScheme, contrast: contrast) }
-    private var highest: Int { max(10, (notes.map(\.staffStep).max() ?? 8) + 2) }
-    private var lowest: Int { min(-2, (notes.map(\.staffStep).min() ?? 0) - 2) }
-    private var bottom: CGFloat { 30 + CGFloat(highest) * 7 }
-    private var width: CGFloat { max(300, 200 + CGFloat(max(0, notes.count - 1)) * 72) }
-    private var labelY: CGFloat { bottom - CGFloat(lowest) * 7 + 18 }
-    private var height: CGFloat { labelY + (showNames ? 22 : 8) }
+    private let unit = MusicEngraving.space
+    private var topExtent: CGFloat {
+        min(-unit + MusicEngraving.clef.boundingRect.minY,
+            notes.map { -CGFloat($0.staffStep) * unit / 2 - ($0.staffStep < 4 ? MusicEngraving.stemLength : unit * 1.5) }.min() ?? -unit * 4)
+    }
+    private var bottomExtent: CGFloat {
+        max(-unit + MusicEngraving.clef.boundingRect.maxY,
+            notes.map { -CGFloat($0.staffStep) * unit / 2 + ($0.staffStep >= 4 ? MusicEngraving.stemLength : unit * 1.5) }.max() ?? 0)
+    }
+    private var bottom: CGFloat { 36 - topExtent }
+    private var firstX: CGFloat { notes.count == 1 ? 130 : 100 }
+    private var width: CGFloat { max(210, firstX + CGFloat(max(0, notes.count - 1)) * 50 + 36) }
+    private var labelY: CGFloat { bottom + bottomExtent + 20 }
+    private var height: CGFloat { labelY + (showNames ? 14 : 0) }
 
     var body: some View {
         FixedDiagram(size: CGSize(width: width * scale, height: height * scale)) {
@@ -41,16 +49,12 @@ struct StaffView: View {
                     var path = Path()
                     path.move(to: CGPoint(x: 18, y: y))
                     path.addLine(to: CGPoint(x: width - 18, y: y))
-                    context.stroke(path, with: .color(ink.opacity(contrast == .increased ? 0.85 : 0.55)), lineWidth: 1)
+                    context.stroke(path, with: .color(ink.opacity(contrast == .increased ? 1 : 0.7)), lineWidth: MusicEngraving.engraving("staffLineThickness"))
                 }
-                context.draw(Text("𝄞").font(.custom("Apple Symbols", size: 73.5)).foregroundColor(ink),
-                             at: CGPoint(x: 43, y: bottom - 17.5))
-                context.draw(Text("8").font(.system(size: 12)).foregroundColor(palette.muted),
-                             at: CGPoint(x: 44, y: bottom + 23))
+                context.fill(MusicEngraving.clef.applying(CGAffineTransform(translationX: 28, y: bottom - unit)), with: .color(ink))
                 var accidentals: [Int: Bool] = [:]
-                let firstX: CGFloat = notes.count == 1 ? 170 : 140
                 for (i, note) in notes.enumerated() {
-                    let x = firstX + CGFloat(i) * 72
+                    let x = firstX + CGFloat(i) * 50
                     let y = bottom - CGFloat(note.staffStep) * 7
                     let color = i < current ? palette.muted : ink
                     if i == current {
@@ -66,18 +70,15 @@ struct StaffView: View {
                             ledger(&context, x: x, y: bottom - CGFloat(step) * 7, color: color)
                         }
                     }
-                    let head = Path(ellipseIn: CGRect(x: -8, y: -5, width: 16, height: 10))
-                        .applying(CGAffineTransform(rotationAngle: -.pi / 8))
-                        .applying(CGAffineTransform(translationX: x, y: y))
-                    context.fill(head, with: .color(color))
-                    let down = note.staffStep >= 4
-                    var stem = Path()
-                    stem.move(to: CGPoint(x: x + (down ? -7 : 7), y: y))
-                    stem.addLine(to: CGPoint(x: x + (down ? -7 : 7), y: y + (down ? 35 : -35)))
-                    context.stroke(stem, with: .color(color), lineWidth: 1.4)
+                    let left = x - MusicEngraving.headWidth / 2
+                    let outline = note.staffStep >= 4 ? MusicEngraving.downStem : MusicEngraving.upStem
+                    let placement = CGAffineTransform(translationX: left, y: y)
+                    context.fill(outline.applying(placement), with: .color(color))
+                    context.fill(MusicEngraving.head.applying(placement), with: .color(color))
                     if !note.isNatural || accidentals[note.staffStep] == true {
-                        context.draw(Text(note.isNatural ? "♮" : "♯").font(.system(size: 23)).foregroundColor(color),
-                                     at: CGPoint(x: x - 21, y: y - 1))
+                        let accidental = note.isNatural ? MusicEngraving.natural : MusicEngraving.sharp
+                        let origin = left - unit * 0.4 - accidental.boundingRect.maxX
+                        context.fill(accidental.applying(CGAffineTransform(translationX: origin, y: y)), with: .color(color))
                     }
                     accidentals[note.staffStep] = !note.isNatural
                     if showNames {
@@ -92,9 +93,9 @@ struct StaffView: View {
     }
     private func ledger(_ context: inout GraphicsContext, x: CGFloat, y: CGFloat, color: Color) {
         var path = Path()
-        path.move(to: CGPoint(x: x - 13, y: y))
-        path.addLine(to: CGPoint(x: x + 13, y: y))
-        context.stroke(path, with: .color(color.opacity(0.7)), lineWidth: 1)
+        path.move(to: CGPoint(x: x - MusicEngraving.headWidth / 2 - MusicEngraving.engraving("legerLineExtension"), y: y))
+        path.addLine(to: CGPoint(x: x + MusicEngraving.headWidth / 2 + MusicEngraving.engraving("legerLineExtension"), y: y))
+        context.stroke(path, with: .color(color), lineWidth: MusicEngraving.engraving("legerLineThickness"))
     }
 }
 

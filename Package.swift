@@ -7,7 +7,7 @@ let package = Package(
     products: [.executable(name: "FretNote", targets: ["FretNoteApp"])],
     targets: [
         .target(name: "FretNoteCore"),
-        .executableTarget(name: "FretNoteApp", dependencies: ["FretNoteCore"]),
+        .executableTarget(name: "FretNoteApp", dependencies: ["FretNoteCore"], resources: [.process("Resources")]),
         .testTarget(name: "FretNoteCoreTests", dependencies: ["FretNoteCore"]),
         .testTarget(name: "FretNoteAppTests", dependencies: ["FretNoteApp", "FretNoteCore"])
     ]

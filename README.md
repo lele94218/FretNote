@@ -51,7 +51,7 @@
 
 ## 开发与打包
 
-需要 macOS 13+、Xcode / Swift 5.9+。无第三方依赖。
+需要 macOS 13+、Xcode / Swift 5.9+。无第三方代码依赖。内置 Bravura 乐谱字体（SIL Open Font License 1.1），离线可用，无需安装系统字体。
 
 ```bash
 swift test
@@ -93,3 +93,5 @@ Resources/AppIcon.svg      图标矢量源文件
 - 区分音名与识谱熟练度，增加更明确的每日复习队列。
 - 加入节拍和节奏练习、听旋律后弹奏。
 - 增加降号、调号及更多把位练习。
+
+五线谱使用 [Steinberg Bravura](https://github.com/steinbergmedia/bravura) 字体及其 SMuFL 元数据。音头、八度高音谱号、升降号使用同一套字形；符干按连接锚点和 3.5 个谱线间距绘制。字体、元数据及许可证位于 `Sources/FretNoteApp/Resources/`，随应用打包。
