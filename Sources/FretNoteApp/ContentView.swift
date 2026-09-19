@@ -96,7 +96,23 @@ struct ContentView: View {
             }
             VStack(alignment: .leading, spacing: 12) {
                 eyebrow("练习范围")
-                if practice.mode != .melody {
+                if practice.mode == .names {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("琴弦 · 可多选").foregroundStyle(muted)
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                            ForEach(1...6, id: \.self) { number in
+                                Toggle(isOn: Binding(
+                                    get: { practice.selectedStrings.contains(number) },
+                                    set: { practice.setString(number, selected: $0) }
+                                )) {
+                                    Text("\(number)").frame(maxWidth: .infinity)
+                                }.toggleStyle(.button)
+                                    .accessibilityLabel("第 \(number) 弦")
+                                    .help("选择要练习的琴弦，至少保留一根")
+                            }
+                        }
+                    }
+                } else if practice.mode == .staff {
                     ScaledPicker(title: "琴弦", selection: $practice.string, options: Array(1...6)) { "第 \($0) 弦" }
                 }
                 if practice.mode != .names {
@@ -168,7 +184,7 @@ struct ContentView: View {
     private var exercise: some View {
         VStack(spacing: 12) {
             HStack {
-                Text(practice.mode == .names ? "第 \(practice.string) 弦 · 全弦找音" : (practice.mode == .melody ? "第 \(practice.lowerFret)–\(practice.upperFret) 品" : "第 \(practice.string) 弦 · \(practice.lowerFret)–\(practice.upperFret) 品"))
+                Text(practice.mode == .names ? "\(practice.notes.isEmpty ? practice.selectedStringLabel : "第 \(practice.currentString) 弦") · 全弦找音" : (practice.mode == .melody ? "第 \(practice.lowerFret)–\(practice.upperFret) 品" : "第 \(practice.string) 弦 · \(practice.lowerFret)–\(practice.upperFret) 品"))
                 Spacer()
                 Text("\(practice.answered) / 20 音").monospacedDigit()
             }.font(.system(size: 12 * scale)).foregroundStyle(muted)
@@ -182,7 +198,7 @@ struct ContentView: View {
                         FretboardView(lower: practice.mode == .names ? max(0, (practice.target?.fret ?? 1) - 1) : practice.lowerFret,
                                       upper: practice.mode == .names ? min(PracticeStore.maximumFret, (practice.target?.fret ?? 1) + 2) : practice.upperFret,
                                       highlightedNote: practice.hint ? practice.target : nil,
-                                      emphasizedString: practice.mode == .melody ? nil : practice.string)
+                                      emphasizedString: practice.mode == .melody ? nil : practice.currentString)
                             .frame(height: max(0, space.size.height - notationHeight - gap))
                     }
                 }
@@ -209,7 +225,7 @@ struct ContentView: View {
                     Text(practice.completed ? "完成" : "弹出这个音").font(.system(size: 13 * scale)).foregroundStyle(muted)
                     Text((practice.target ?? practice.notes.last)?.name ?? "—")
                         .font(.system(size: 72 * scale)).minimumScaleFactor(0.5)
-                    Text("第 \(practice.string) 弦").font(.system(size: 14 * scale)).foregroundStyle(muted)
+                    Text("第 \(practice.currentString) 弦").font(.system(size: 14 * scale)).foregroundStyle(muted)
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 StaffView(notes: practice.notes, current: practice.index, showNames: practice.showNames)

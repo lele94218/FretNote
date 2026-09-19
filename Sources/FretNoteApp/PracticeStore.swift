@@ -6,6 +6,20 @@ final class PracticeStore: ObservableObject {
     static let maximumFret = 21
     @Published var mode: PracticeMode = .names
     @Published var string = 1
+    @Published private(set) var selectedStrings: Set<Int> = [1]
+    func setString(_ number: Int, selected: Bool) {
+        guard !active, (1...6).contains(number) else { return }
+        if selected { selectedStrings.insert(number) }
+        else if selectedStrings.count > 1 { selectedStrings.remove(number) }
+        notes = []
+        hint = false
+    }
+    var currentString: Int {
+        mode == .names ? (target ?? notes.last)?.string ?? selectedStrings.sorted().first ?? 1 : string
+    }
+    var selectedStringLabel: String {
+        selectedStrings.sorted().map(String.init).joined(separator: "、") + " 弦"
+    }
     @Published var lowerFret = 1 {
         didSet {
             let bounded = min(max(customRange ? 0 : 1, lowerFret), customRange ? Self.maximumFret : Self.maximumFret - 3)
@@ -82,14 +96,18 @@ final class PracticeStore: ObservableObject {
         feedbackKind = 0
     }
     var exercisePool: [GuitarNote] {
-        ExerciseGenerator.pool(string: mode == .melody ? nil : string,
+        ExerciseGenerator.pool(string: mode == .staff ? string : nil,
                                lower: mode == .names ? 0 : lowerFret,
                                upper: mode == .names ? Self.maximumFret : upperFret,
                                naturalsOnly: naturalsOnly)
+            .filter { mode != .names || selectedStrings.contains($0.string) }
     }
     func nextExercise() {
         let previous = notes.last?.id
-        let pool = exercisePool
+        var pool = exercisePool
+        if mode == .names, selectedStrings.count > 1, let previousString = notes.last?.string {
+            pool = pool.filter { $0.string != previousString }
+        }
         notes = ExerciseGenerator.make(pool: pool, count: mode == .melody ? min(melodyLength, 20 - answered) : 1, progress: progress, excluding: previous)
         index = 0; completed = false; hint = false; wrong = false
         began = Date(); ignoreUntil = Date().addingTimeInterval(0.15)
@@ -105,14 +123,14 @@ final class PracticeStore: ObservableObject {
     }
     func receive(_ midi: Int) {
         guard active, !completed, Date() >= ignoreUntil, let target else { return }
-        let playedFret = midi - GuitarNote.openMIDI[string - 1]
+        let playedFret = midi - GuitarNote.openMIDI[target.string - 1]
         let correct = mode == .names
             ? (0...Self.maximumFret).contains(playedFret) && midi % 12 == target.midi % 12
             : midi == target.midi
         if correct {
             if mode == .names {
                 // Credit the sounding octave on the requested string, not a hidden target octave.
-                notes[index] = GuitarNote(string: string, fret: playedFret)
+                notes[index] = GuitarNote(string: target.string, fret: playedFret)
             }
             let clean = !wrong && !hint
             finishNote(correct: clean, hinted: hint)

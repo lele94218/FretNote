@@ -132,6 +132,40 @@ final class PracticeTests: XCTestCase {
         store.end()
     }
 
+    @MainActor
+    func testMultipleStringsAndCreditOnRequestedString() async throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let store = PracticeStore(file: folder.appendingPathComponent("progress.json"))
+        store.setString(1, selected: false)
+        XCTAssertEqual(store.selectedStrings, [1])
+        store.setString(6, selected: true)
+        store.setString(3, selected: true)
+        store.setString(1, selected: false)
+        store.naturalsOnly = false
+        XCTAssertEqual(Set(store.exercisePool.map(\.string)), [3, 6])
+        XCTAssertEqual(store.exercisePool.count, 44)
+        store.start()
+        var previousString = try XCTUnwrap(store.target).string
+        for _ in 0..<10 {
+            store.nextExercise()
+            let selected = try XCTUnwrap(store.target).string
+            XCTAssertTrue([3, 6].contains(selected))
+            XCTAssertNotEqual(selected, previousString)
+            previousString = selected
+        }
+        store.setString(2, selected: true)
+        XCTAssertFalse(store.selectedStrings.contains(2)) // No changes mid-session.
+        store.notes = [GuitarNote(string: 6, fret: 3)]
+        XCTAssertEqual(store.currentString, 6)
+        try await Task.sleep(nanoseconds: 170_000_000)
+        store.receive(GuitarNote(string: 6, fret: 15).midi)
+        XCTAssertEqual(store.answered, 1)
+        XCTAssertNotNil(store.progress["6:15"])
+        XCTAssertNil(store.progress["1:15"])
+        store.end()
+    }
+
     /// Optional offscreen UI render: FRETNOTE_SNAPSHOT_DIR=/tmp/... swift test --filter testRender
     @MainActor
     func testRender() async throws {
