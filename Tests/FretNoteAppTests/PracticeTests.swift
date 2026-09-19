@@ -65,6 +65,10 @@ final class PracticeTests: XCTestCase {
         _ = NSApplication.shared
         let folder = URL(fileURLWithPath: path)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let suite = "FretNote.snapshots.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let appearance = AppearancePreferences(defaults: defaults)
         let audio = AudioInput()
         let store = PracticeStore(file: folder.appendingPathComponent("unused-progress.json"))
         let scenes: [(String, PracticeMode, Int, Int, Bool)] = [
@@ -75,14 +79,20 @@ final class PracticeTests: XCTestCase {
             ("空弦提示", .melody, 0, 5, true),
             ("高把位提示", .melody, 12, 17, true)
         ]
+        for (theme, scale) in [(AppTheme.light, 1.25), (.dark, 1.25), (.light, 1.75), (.dark, 1.75)] {
+        appearance.theme = theme; appearance.setFontScale(scale)
         for (name, mode, lower, upper, hint) in scenes {
             store.mode = mode
             store.lowerFret = lower; store.upperFret = upper; store.hint = hint
             store.notes = mode == .melody ? [GuitarNote(string: 3, fret: lower), GuitarNote(string: 3, fret: lower + 2), GuitarNote(string: 2, fret: lower), GuitarNote(string: 3, fret: lower + 2)] : [GuitarNote(string: 1, fret: 3)]
-            let view = ContentView(audio: audio, practice: store).preferredColorScheme(.light).frame(width: 1160, height: 820)
+            let view = ContentView(audio: audio, practice: store)
+                .environmentObject(appearance)
+                .environment(\.interfaceScale, scale)
+                .preferredColorScheme(theme.colorScheme)
+                .frame(width: 1160, height: 820)
             let host = NSHostingView(rootView: view)
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1160, height: 820), styleMask: [.borderless], backing: .buffered, defer: false)
-            window.appearance = NSAppearance(named: .aqua)
+            window.appearance = NSAppearance(named: theme == .dark ? .darkAqua : .aqua)
             window.contentView = host
             window.orderFront(nil)
             try await Task.sleep(nanoseconds: 300_000_000)
@@ -90,8 +100,9 @@ final class PracticeTests: XCTestCase {
             let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
             host.cacheDisplay(in: host.bounds, to: bitmap)
             let data = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
-            try data.write(to: folder.appendingPathComponent("\(name).png"))
+            try data.write(to: folder.appendingPathComponent("\(name)-\(theme.rawValue)-\(Int(scale * 100)).png"))
             window.orderOut(nil)
+        }
         }
     }
 }

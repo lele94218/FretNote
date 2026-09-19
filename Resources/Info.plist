@@ -5,9 +5,10 @@
     <key>CFBundleIdentifier</key><string>com.lele94218.FretNote</string>
     <key>CFBundleName</key><string>FretNote</string>
     <key>CFBundleDisplayName</key><string>FretNote</string>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>0.1.0</string>
-    <key>CFBundleVersion</key><string>1</string>
+    <key>CFBundleShortVersionString</key><string>0.2.0</string>
+    <key>CFBundleVersion</key><string>2</string>
     <key>LSMinimumSystemVersion</key><string>13.0</string>
     <key>NSHighResolutionCapable</key><true/>
     <key>NSMicrophoneUsageDescription</key><string>FretNote 需要通过声卡或麦克风分析你弹奏的吉他音高。声音仅在本机处理，不录音、不上传。</string>

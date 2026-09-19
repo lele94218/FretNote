@@ -5,9 +5,14 @@ struct StaffView: View {
     let notes: [GuitarNote]
     let current: Int
     let showNames: Bool
-    private let ink = Color.black
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.interfaceScale) private var scale
+    private var palette: AppPalette { AppPalette(scheme: colorScheme) }
+    private var ink: Color { palette.ink }
     var body: some View {
-        Canvas { context, size in
+        Canvas { context, physicalSize in
+            context.scaleBy(x: scale, y: scale)
+            let size = CGSize(width: physicalSize.width / scale, height: physicalSize.height / scale)
             let highest = max(10, (notes.map(\.staffStep).max() ?? 8) + 2)
             let lowest = min(-2, (notes.map(\.staffStep).min() ?? 0) - 2)
             let spacing = min(16, (size.height - 68) * 2 / CGFloat(highest - lowest))
@@ -20,13 +25,13 @@ struct StaffView: View {
                 context.stroke(path, with: .color(ink.opacity(0.35)), lineWidth: 1)
             }
             context.draw(Text("𝄞").font(.custom("Apple Symbols", size: spacing * 5.25)).foregroundColor(ink), at: CGPoint(x: 51, y: bottom - spacing * 1.25))
-            context.draw(Text("8").font(.system(size: 11)).foregroundColor(ink.opacity(0.65)), at: CGPoint(x: 52, y: bottom + spacing * 1.6))
+            context.draw(Text("8").font(.system(size: 12)).foregroundColor(ink.opacity(0.65)), at: CGPoint(x: 52, y: bottom + spacing * 1.6))
             let available = end - start
             var accidentals: [Int: Bool] = [:]
             for (i, note) in notes.enumerated() {
                 let x = start + available * CGFloat(i + 1) / CGFloat(notes.count + 1)
                 let y = bottom - CGFloat(note.staffStep) * spacing / 2
-                let color = i < current ? Color(white: 0.65) : ink
+                let color = i < current ? palette.muted : ink
                 if i == current {
                     context.draw(Text("↓").font(.system(size: 20)).foregroundColor(ink), at: CGPoint(x: x, y: 10))
                 }
@@ -67,6 +72,9 @@ struct FretboardView: View {
     let upper: Int
     var highlightedNote: GuitarNote? = nil
     var emphasizedString: Int? = nil
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.interfaceScale) private var scale
+    private var palette: AppPalette { AppPalette(scheme: colorScheme) }
 
     private var firstFret: Int { max(0, lower - 1) }
     private var lastFret: Int { min(24, upper + 1) }
@@ -83,9 +91,11 @@ struct FretboardView: View {
                     Text("灰色区域为练习范围")
                 }
             }
-            .font(.system(size: 11)).foregroundStyle(Color(white: 0.42))
+            .font(.system(size: 12 * scale)).foregroundStyle(palette.muted)
 
-            Canvas { context, size in
+            Canvas { context, physicalSize in
+            context.scaleBy(x: scale, y: scale)
+            let size = CGSize(width: physicalSize.width / scale, height: physicalSize.height / scale)
                 let left: CGFloat = 64
                 let right = size.width - 12
                 let top: CGFloat = 12
@@ -96,14 +106,14 @@ struct FretboardView: View {
                 let selection = CGRect(x: selectionX, y: top - 8,
                                        width: CGFloat(upper - lower + 1) * cell,
                                        height: bottom - top + 16)
-                context.fill(Path(selection), with: .color(Color(white: 0.94)))
+                context.fill(Path(selection), with: .color(palette.selection))
 
                 for string in 1...6 {
                     let y = top + CGFloat(string - 1) * 20
                     let emphasized = emphasizedString == nil || emphasizedString == string
-                    let color = Color.black.opacity(emphasized ? 0.55 : 0.2)
+                    let color = palette.ink.opacity(emphasized ? 0.55 : 0.2)
                     context.draw(Text("\(string)  \(tuning[string - 1])")
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(.system(size: 12, design: .monospaced))
                         .foregroundColor(color), at: CGPoint(x: left - 12, y: y), anchor: .trailing)
                     var line = Path()
                     line.move(to: CGPoint(x: left, y: y))
@@ -113,14 +123,14 @@ struct FretboardView: View {
                 for fret in firstFret...lastFret {
                     let x = left + CGFloat(fret - firstFret) * cell
                     let inRange = (lower...upper).contains(fret)
-                    let color = Color.black.opacity(inRange ? 0.8 : 0.35)
+                    let color = palette.ink.opacity(inRange ? 0.8 : 0.35)
                     context.draw(Text(fret == 0 ? "空弦" : "\(fret)")
-                        .font(.system(size: 11)).foregroundColor(color),
+                        .font(.system(size: 12)).foregroundColor(color),
                         at: CGPoint(x: x + cell / 2, y: 138))
                     var wire = Path()
                     wire.move(to: CGPoint(x: x + cell, y: top))
                     wire.addLine(to: CGPoint(x: x + cell, y: bottom))
-                    context.stroke(wire, with: .color(.black.opacity(fret == 0 ? 0.75 : 0.25)),
+                    context.stroke(wire, with: .color(palette.ink.opacity(fret == 0 ? 0.75 : 0.25)),
                                    lineWidth: fret == 0 ? 3 : 1)
                 }
                 // Close the left edge only when the segment begins above the nut.
@@ -128,18 +138,18 @@ struct FretboardView: View {
                     var edge = Path()
                     edge.move(to: CGPoint(x: left, y: top))
                     edge.addLine(to: CGPoint(x: left, y: bottom))
-                    context.stroke(edge, with: .color(.black.opacity(0.25)), lineWidth: 1)
+                    context.stroke(edge, with: .color(palette.ink.opacity(0.25)), lineWidth: 1)
                 }
                 if let note = highlightedNote,
                    (firstFret...lastFret).contains(note.fret), (1...6).contains(note.string) {
                     let x = left + (CGFloat(note.fret - firstFret) + 0.5) * cell
                     let y = top + CGFloat(note.string - 1) * 20
                     let dot = Path(ellipseIn: CGRect(x: x - 8, y: y - 8, width: 16, height: 16))
-                    context.fill(dot, with: .color(note.fret == 0 ? .white : .black))
-                    if note.fret == 0 { context.stroke(dot, with: .color(.black), lineWidth: 2) }
+                    context.fill(dot, with: .color(note.fret == 0 ? palette.background : palette.ink))
+                    if note.fret == 0 { context.stroke(dot, with: .color(palette.ink), lineWidth: 2) }
                 }
             }
-            .frame(height: 150)
+            .frame(height: 150 * scale)
             .accessibilityLabel("吉他指板，一弦在上，六弦在下；练习范围第 \(lower) 到 \(upper) 品")
             .accessibilityValue(highlightedNote.map { "参考位置：第 \($0.string) 弦，第 \($0.fret) 品" } ?? "未显示答案位置")
         }
