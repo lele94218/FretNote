@@ -96,7 +96,7 @@ final class PracticeStore: ObservableObject {
         feedbackKind = 0
     }
     var exercisePool: [GuitarNote] {
-        ExerciseGenerator.pool(string: mode == .staff ? string : nil,
+        ExerciseGenerator.pool(string: nil,
                                lower: mode == .names ? 0 : lowerFret,
                                upper: mode == .names ? Self.maximumFret : upperFret,
                                naturalsOnly: naturalsOnly)

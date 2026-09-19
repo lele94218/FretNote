@@ -112,8 +112,6 @@ struct ContentView: View {
                             }
                         }
                     }
-                } else if practice.mode == .staff {
-                    ScaledPicker(title: "琴弦", selection: $practice.string, options: Array(1...6)) { "第 \($0) 弦" }
                 }
                 if practice.mode != .names {
                 VStack(spacing: 12) {
@@ -184,7 +182,7 @@ struct ContentView: View {
     private var exercise: some View {
         VStack(spacing: 12) {
             HStack {
-                Text(practice.mode == .names ? "\(practice.notes.isEmpty ? practice.selectedStringLabel : "第 \(practice.currentString) 弦") · 全弦找音" : (practice.mode == .melody ? "第 \(practice.lowerFret)–\(practice.upperFret) 品" : "第 \(practice.string) 弦 · \(practice.lowerFret)–\(practice.upperFret) 品"))
+                Text(practice.mode == .names ? "\(practice.notes.isEmpty ? practice.selectedStringLabel : "第 \(practice.currentString) 弦") · 全弦找音" : "第 \(practice.lowerFret)–\(practice.upperFret) 品 · 六根弦")
                 Spacer()
                 Text("\(practice.answered) / 20 音").monospacedDigit()
             }.font(.system(size: 12 * scale)).foregroundStyle(muted)
@@ -198,7 +196,7 @@ struct ContentView: View {
                         FretboardView(lower: practice.mode == .names ? max(0, (practice.target?.fret ?? 1) - 1) : practice.lowerFret,
                                       upper: practice.mode == .names ? min(PracticeStore.maximumFret, (practice.target?.fret ?? 1) + 2) : practice.upperFret,
                                       highlightedNote: practice.hint ? practice.target : nil,
-                                      emphasizedString: practice.mode == .melody ? nil : practice.currentString)
+                                      emphasizedString: practice.mode == .names ? practice.currentString : nil)
                             .frame(height: max(0, space.size.height - notationHeight - gap))
                     }
                 }

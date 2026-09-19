@@ -123,7 +123,9 @@ final class PracticeTests: XCTestCase {
         XCTAssertNil(store.progress["1:3"])
         store.end()
         store.mode = .staff
-        XCTAssertEqual(store.exercisePool.map(\.fret), Array(18...21))
+        XCTAssertEqual(Set(store.exercisePool.map(\.fret)), Set(18...21))
+        XCTAssertEqual(Set(store.exercisePool.map(\.string)), Set(1...6))
+        XCTAssertEqual(store.exercisePool.count, 24)
         store.start()
         store.notes = [GuitarNote(string: 1, fret: 3)]
         try await Task.sleep(nanoseconds: 170_000_000)
@@ -163,6 +165,24 @@ final class PracticeTests: XCTestCase {
         XCTAssertEqual(store.answered, 1)
         XCTAssertNotNil(store.progress["6:15"])
         XCTAssertNil(store.progress["1:15"])
+        store.end()
+    }
+
+    @MainActor
+    func testStaffIncludesEveryStringWithinPosition() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let store = PracticeStore(file: folder.appendingPathComponent("progress.json"))
+        store.mode = .staff
+        store.lowerFret = 5
+        store.naturalsOnly = false
+        let expected = Set((1...6).flatMap { string in (5...8).map { GuitarNote(string: string, fret: $0) } })
+        XCTAssertEqual(Set(store.exercisePool), expected)
+        store.naturalsOnly = true
+        XCTAssertEqual(Set(store.exercisePool), Set(expected.filter(\.isNatural)))
+        store.start()
+        XCTAssertEqual(store.notes.count, 1)
+        XCTAssertTrue(store.notes.allSatisfy { expected.contains($0) })
         store.end()
     }
 
