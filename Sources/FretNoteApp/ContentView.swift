@@ -117,7 +117,8 @@ struct ContentView: View {
                     Text("第 \(practice.string) 弦").font(.system(size: 14)).foregroundStyle(muted)
                 }.frame(height: 218)
             } else {
-                StaffView(notes: practice.notes, current: practice.index, showNames: practice.showNames).frame(height: 218)
+                StaffView(notes: practice.notes, current: practice.index, showNames: practice.showNames)
+                    .frame(height: practice.mode == .melody ? 176 : 218)
             }
             HStack(spacing: 8) {
                 if practice.feedbackKind != 0 {
@@ -126,9 +127,11 @@ struct ContentView: View {
                 Text(practice.notes.isEmpty ? "" : practice.feedback).font(.system(size: 13))
             }.foregroundStyle(practice.feedbackKind == 0 ? muted : ink)
                 .frame(height: 22)
-            if practice.hint, let note = practice.target {
-                FretboardHint(note: note, lower: practice.lowerFret, upper: practice.upperFret)
-                    .frame(maxWidth: 420)
+            if practice.mode == .melody || practice.hint {
+                FretboardView(lower: practice.lowerFret, upper: practice.upperFret,
+                              highlightedNote: practice.hint ? practice.target : nil,
+                              emphasizedString: practice.mode == .melody ? nil : practice.string)
+                    .frame(maxWidth: 680)
             }
             Rectangle().fill(rule).frame(height: 1)
             HStack {

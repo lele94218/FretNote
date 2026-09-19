@@ -67,9 +67,18 @@ final class PracticeTests: XCTestCase {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let audio = AudioInput()
         let store = PracticeStore(file: folder.appendingPathComponent("unused-progress.json"))
-        for mode in PracticeMode.allCases {
+        let scenes: [(String, PracticeMode, Int, Int, Bool)] = [
+            ("音名找音", .names, 0, 5, false),
+            ("五线谱找音", .staff, 0, 5, false),
+            ("短旋律", .melody, 0, 5, false),
+            ("把位提示", .melody, 2, 5, true),
+            ("空弦提示", .melody, 0, 5, true),
+            ("高把位提示", .melody, 12, 17, true)
+        ]
+        for (name, mode, lower, upper, hint) in scenes {
             store.mode = mode
-            store.notes = mode == .melody ? [GuitarNote(string: 3, fret: 0), GuitarNote(string: 3, fret: 2), GuitarNote(string: 2, fret: 0), GuitarNote(string: 3, fret: 2)] : [GuitarNote(string: 1, fret: 3)]
+            store.lowerFret = lower; store.upperFret = upper; store.hint = hint
+            store.notes = mode == .melody ? [GuitarNote(string: 3, fret: lower), GuitarNote(string: 3, fret: lower + 2), GuitarNote(string: 2, fret: lower), GuitarNote(string: 3, fret: lower + 2)] : [GuitarNote(string: 1, fret: 3)]
             let view = ContentView(audio: audio, practice: store).preferredColorScheme(.light).frame(width: 1160, height: 820)
             let host = NSHostingView(rootView: view)
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1160, height: 820), styleMask: [.borderless], backing: .buffered, defer: false)
@@ -81,7 +90,7 @@ final class PracticeTests: XCTestCase {
             let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
             host.cacheDisplay(in: host.bounds, to: bitmap)
             let data = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
-            try data.write(to: folder.appendingPathComponent("\(mode.id).png"))
+            try data.write(to: folder.appendingPathComponent("\(name).png"))
             window.orderOut(nil)
         }
     }
