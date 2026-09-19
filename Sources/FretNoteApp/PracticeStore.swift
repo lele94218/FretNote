@@ -5,8 +5,20 @@ import FretNoteCore
 final class PracticeStore: ObservableObject {
     @Published var mode: PracticeMode = .names
     @Published var string = 1
-    @Published var lowerFret = 0
-    @Published var upperFret = 5
+    @Published var lowerFret = 1 {
+        didSet { customUpperFret = min(max(customUpperFret, lowerFret), min(17, lowerFret + 5)) }
+    }
+    @Published var customRange = false {
+        didSet {
+            if !customRange && lowerFret == 0 { lowerFret = 1 }
+            customUpperFret = lowerFret + 3
+        }
+    }
+    @Published private var customUpperFret = 4
+    var upperFret: Int {
+        get { customRange ? customUpperFret : lowerFret + 3 }
+        set { customUpperFret = min(max(newValue, lowerFret), min(17, lowerFret + 5)) }
+    }
     @Published var naturalsOnly = true
     @Published var showNames = true
     @Published var melodyLength = 4

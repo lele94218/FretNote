@@ -58,6 +58,38 @@ final class PracticeTests: XCTestCase {
         store.start(); store.skip(); store.end()
         XCTAssertEqual(try Data(contentsOf: file), original)
     }
+    @MainActor
+    func testFourFretPositionAndCustomRange() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let store = PracticeStore(file: folder.appendingPathComponent("progress.json"))
+        XCTAssertEqual(store.lowerFret, 1)
+        XCTAssertEqual(store.upperFret, 4)
+        for lower in 1...12 {
+            store.lowerFret = lower
+            XCTAssertEqual(store.upperFret, lower + 3)
+            store.mode = .melody
+            store.start()
+            XCTAssertTrue(store.notes.allSatisfy { (lower...(lower + 3)).contains($0.fret) })
+            store.end()
+        }
+        store.customRange = true
+        store.lowerFret = 0
+        store.upperFret = 5
+        XCTAssertEqual(store.upperFret, 5)
+        store.lowerFret = 8
+        XCTAssertEqual(store.upperFret, 8)
+        store.upperFret = 10
+        XCTAssertEqual(store.upperFret, 10)
+        store.customRange = false
+        XCTAssertEqual(store.upperFret, 11)
+        store.customRange = true
+        store.lowerFret = 0
+        store.customRange = false
+        XCTAssertEqual(store.lowerFret, 1)
+        XCTAssertEqual(store.upperFret, 4)
+    }
+
     /// Optional offscreen UI render: FRETNOTE_SNAPSHOT_DIR=/tmp/... swift test --filter testRender
     @MainActor
     func testRender() async throws {
@@ -87,6 +119,7 @@ final class PracticeTests: XCTestCase {
             store.active = hint
             store.feedback = hint ? "请弹奏目标音。" : "等待开始。"
             store.mode = mode
+            store.customRange = true
             store.lowerFret = lower; store.upperFret = upper; store.hint = hint
             store.notes = mode == .melody ? [GuitarNote(string: 3, fret: lower), GuitarNote(string: 3, fret: lower + 2), GuitarNote(string: 2, fret: lower), GuitarNote(string: 3, fret: lower + 2)] : [GuitarNote(string: 1, fret: 3)]
             let view = ContentView(audio: audio, practice: store)

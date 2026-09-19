@@ -100,10 +100,15 @@ struct ContentView: View {
                     ScaledPicker(title: "琴弦", selection: $practice.string, options: Array(1...6)) { "第 \($0) 弦" }
                 }
                 VStack(spacing: 12) {
-                    HStack { Text("起始品"); Spacer(); ScaledPicker(accessibilityName: "起始品", controlWidth: 72, selection: $practice.lowerFret, options: Array(0...12)) { "\($0)" }.accessibilityLabel("起始品") }
-                    HStack { Text("结束品"); Spacer(); ScaledPicker(accessibilityName: "结束品", controlWidth: 72, selection: $practice.upperFret, options: Array(practice.lowerFret...min(17, practice.lowerFret + 5))) { "\($0)" }.accessibilityLabel("结束品") }
+                    HStack { Text("起始品"); Spacer(); ScaledPicker(accessibilityName: "起始品", controlWidth: 72, selection: $practice.lowerFret, options: Array((practice.customRange ? 0 : 1)...12)) { "\($0)" }.accessibilityLabel("起始品") }
+                    if practice.customRange {
+                        HStack { Text("结束品"); Spacer(); ScaledPicker(accessibilityName: "结束品", controlWidth: 72, selection: $practice.upperFret, options: Array(practice.lowerFret...min(17, practice.lowerFret + 5))) { "\($0)" }.accessibilityLabel("结束品") }
+                    } else {
+                        Text("第 \(practice.lowerFret)–\(practice.upperFret) 品 · 四个品格")
+                            .foregroundStyle(muted).frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
-                .onChange(of: practice.lowerFret) { value in practice.upperFret = min(max(practice.upperFret, value), value + 5) }
+                Toggle("自定义范围", isOn: $practice.customRange).toggleStyle(.checkbox)
                 Toggle("只练自然音", isOn: $practice.naturalsOnly).toggleStyle(.checkbox).controlSize(.large)
                 if practice.mode != .names {
                     Toggle("显示音名辅助", isOn: $practice.showNames).toggleStyle(.checkbox).controlSize(.large)
