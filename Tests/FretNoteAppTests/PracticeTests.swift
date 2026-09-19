@@ -83,6 +83,9 @@ final class PracticeTests: XCTestCase {
         for (theme, scale) in [(AppTheme.light, 1.25), (.dark, 1.25), (.light, 1.75), (.dark, 1.75)] {
         appearance.theme = theme; appearance.setFontScale(scale)
         for (name, mode, lower, upper, hint) in scenes {
+            audio.running = hint
+            store.active = hint
+            store.feedback = hint ? "请弹奏目标音。" : "等待开始。"
             store.mode = mode
             store.lowerFret = lower; store.upperFret = upper; store.hint = hint
             store.notes = mode == .melody ? [GuitarNote(string: 3, fret: lower), GuitarNote(string: 3, fret: lower + 2), GuitarNote(string: 2, fret: lower), GuitarNote(string: 3, fret: lower + 2)] : [GuitarNote(string: 1, fret: 3)]
@@ -90,9 +93,9 @@ final class PracticeTests: XCTestCase {
                 .environmentObject(appearance)
                 .environment(\.interfaceScale, scale)
                 .preferredColorScheme(theme.colorScheme)
-                .frame(width: width, height: 1000)
+                .frame(width: width, height: 820)
             let host = NSHostingView(rootView: view)
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: width, height: 1000), styleMask: [.borderless], backing: .buffered, defer: false)
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: width, height: 820), styleMask: [.borderless], backing: .buffered, defer: false)
             window.appearance = NSAppearance(named: theme == .dark ? .darkAqua : .aqua)
             window.contentView = host
             window.orderFront(nil)
@@ -125,8 +128,35 @@ final class PracticeTests: XCTestCase {
                 picker.performClick(nil)
                 timer.invalidate()
             }
+            if name == "把位提示", width == 1040 {
+                store.index = 3
+                try await Task.sleep(nanoseconds: 300_000_000)
+                host.layoutSubtreeIfNeeded()
+                let followed = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+                host.cacheDisplay(in: host.bounds, to: followed)
+                try XCTUnwrap(followed.representation(using: .png, properties: [:])).write(to: folder.appendingPathComponent("跟随末音-\(theme.rawValue)-\(Int(scale * 100)).png"))
+                store.index = 0
+            }
             window.orderOut(nil)
         }
+        audio.running = false
+        store.active = false
+        let settings = AppSettingsView(audio: audio)
+            .environmentObject(appearance)
+            .environment(\.interfaceScale, scale)
+            .preferredColorScheme(theme.colorScheme)
+        let settingsHost = NSHostingView(rootView: settings)
+        settingsHost.frame = NSRect(x: 0, y: 0, width: 560, height: 640)
+        let settingsWindow = NSWindow(contentRect: settingsHost.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+        settingsWindow.appearance = NSAppearance(named: theme == .dark ? .darkAqua : .aqua)
+        settingsWindow.contentView = settingsHost
+        settingsWindow.orderFront(nil)
+        try await Task.sleep(nanoseconds: 200_000_000)
+        settingsHost.layoutSubtreeIfNeeded()
+        let settingsBitmap = try XCTUnwrap(settingsHost.bitmapImageRepForCachingDisplay(in: settingsHost.bounds))
+        settingsHost.cacheDisplay(in: settingsHost.bounds, to: settingsBitmap)
+        try XCTUnwrap(settingsBitmap.representation(using: .png, properties: [:])).write(to: folder.appendingPathComponent("设置-\(theme.rawValue)-\(Int(scale * 100)).png"))
+        settingsWindow.orderOut(nil)
         }
         }
     }

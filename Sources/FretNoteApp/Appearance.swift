@@ -13,6 +13,7 @@ enum AppTheme: String, CaseIterable, Identifiable {
 
 @MainActor
 final class AppearancePreferences: ObservableObject {
+    @Published var sidebarVisible = true
     @Published var theme: AppTheme { didSet { defaults.set(theme.rawValue, forKey: "appearance.theme") } }
     @Published private(set) var fontScale: Double
     private let defaults: UserDefaults
@@ -41,9 +42,10 @@ extension EnvironmentValues {
 
 struct AppPalette {
     let scheme: ColorScheme
+    var contrast: ColorSchemeContrast = .standard
     var ink: Color { Color(white: scheme == .dark ? 0.93 : 0.08) }
     var background: Color { Color(white: scheme == .dark ? 0.07 : 1) }
-    var muted: Color { Color(white: scheme == .dark ? 0.65 : 0.42) }
-    var rule: Color { Color(white: scheme == .dark ? 0.27 : 0.88) }
+    var muted: Color { Color(white: scheme == .dark ? (contrast == .increased ? 0.85 : 0.65) : (contrast == .increased ? 0.2 : 0.42)) }
+    var rule: Color { Color(white: scheme == .dark ? (contrast == .increased ? 0.65 : 0.27) : (contrast == .increased ? 0.4 : 0.88)) }
     var selection: Color { Color(white: scheme == .dark ? 0.18 : 0.94) }
 }

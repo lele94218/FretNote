@@ -5,15 +5,30 @@ import FretNoteCore
 /// Extra room becomes margins; a narrow viewport scrolls horizontally.
 struct FixedDiagram<Content: View>: View {
     let size: CGSize
+    var focusX: CGFloat? = nil
     @ViewBuilder let content: () -> Content
     @Environment(\.interfaceScale) private var scale
     var body: some View {
         GeometryReader { viewport in
             VStack(spacing: 0) {
-                ScrollView(.horizontal) {
-                    content()
-                        .frame(width: size.width, height: size.height)
-                        .frame(minWidth: viewport.size.width)
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal) {
+                        content()
+                            .frame(width: size.width, height: size.height)
+                            .overlay(alignment: .topLeading) {
+                                if let focusX {
+                                    HStack(spacing: 0) {
+                                        Color.clear.frame(width: max(0, focusX), height: 1)
+                                        Color.clear.frame(width: 1, height: 1).id("current-target")
+                                        Spacer(minLength: 0)
+                                    }.allowsHitTesting(false).accessibilityHidden(true)
+                                }
+                            }
+                            .frame(minWidth: viewport.size.width)
+                    }
+                    .onAppear { proxy.scrollTo("current-target", anchor: .center) }
+                    .onChange(of: focusX) { _ in proxy.scrollTo("current-target", anchor: .center) }
+                    .onChange(of: viewport.size.width) { _ in proxy.scrollTo("current-target", anchor: .center) }
                 }
                 .frame(height: size.height)
                 if viewport.size.width < size.width {
@@ -30,9 +45,10 @@ struct StaffView: View {
     let notes: [GuitarNote]
     let current: Int
     let showNames: Bool
+    @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.interfaceScale) private var scale
-    private var palette: AppPalette { AppPalette(scheme: colorScheme) }
+    private var palette: AppPalette { AppPalette(scheme: colorScheme, contrast: contrast) }
     private var highest: Int { max(10, (notes.map(\.staffStep).max() ?? 8) + 2) }
     private var lowest: Int { min(-2, (notes.map(\.staffStep).min() ?? 0) - 2) }
     private var bottom: CGFloat { 30 + CGFloat(highest) * 7 }
@@ -41,7 +57,8 @@ struct StaffView: View {
     private var height: CGFloat { labelY + (showNames ? 22 : 8) }
 
     var body: some View {
-        FixedDiagram(size: CGSize(width: width * scale, height: height * scale)) {
+        FixedDiagram(size: CGSize(width: width * scale, height: height * scale),
+                     focusX: ((notes.count == 1 ? 170 : 140) + CGFloat(min(current, max(0, notes.count - 1))) * 72) * scale) {
             Canvas { context, _ in
                 context.scaleBy(x: scale, y: scale)
                 let ink = palette.ink
@@ -50,7 +67,7 @@ struct StaffView: View {
                     var path = Path()
                     path.move(to: CGPoint(x: 18, y: y))
                     path.addLine(to: CGPoint(x: width - 18, y: y))
-                    context.stroke(path, with: .color(ink.opacity(0.45)), lineWidth: 1)
+                    context.stroke(path, with: .color(ink.opacity(contrast == .increased ? 0.85 : 0.55)), lineWidth: 1)
                 }
                 context.draw(Text("𝄞").font(.custom("Apple Symbols", size: 73.5)).foregroundColor(ink),
                              at: CGPoint(x: 43, y: bottom - 17.5))
@@ -97,7 +114,7 @@ struct StaffView: View {
             }
         }
         .accessibilityLabel("吉他高音谱表，实际发声低八度")
-        .accessibilityValue(notes.map(\.fullName).joined(separator: "，"))
+        .accessibilityValue((notes.indices.contains(current) ? "当前第 \(current + 1) 个音：\(notes[current].fullName)。" : "本题完成。") + "全曲：" + notes.map(\.fullName).joined(separator: "，"))
     }
     private func ledger(_ context: inout GraphicsContext, x: CGFloat, y: CGFloat, color: Color) {
         var path = Path()
@@ -114,9 +131,10 @@ struct FretboardView: View {
     let upper: Int
     var highlightedNote: GuitarNote? = nil
     var emphasizedString: Int? = nil
+    @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.interfaceScale) private var scale
-    private var palette: AppPalette { AppPalette(scheme: colorScheme) }
+    private var palette: AppPalette { AppPalette(scheme: colorScheme, contrast: contrast) }
     private var firstFret: Int { max(0, lower - 1) }
     private var lastFret: Int { min(24, upper + 1) }
     private let tuning = ["E4", "B3", "G3", "D3", "A2", "E2"]
@@ -141,7 +159,11 @@ struct FretboardView: View {
                 VStack(alignment: .leading, spacing: 5) { rangeLabel; hintLabel }
             }
             .font(.system(size: 12 * scale)).foregroundStyle(palette.muted)
-            FixedDiagram(size: CGSize(width: (right + 14) * scale, height: 140 * scale)) {
+            FixedDiagram(size: CGSize(width: (right + 14) * scale, height: 140 * scale),
+                         focusX: highlightedNote.flatMap { note in
+                             guard (firstFret...lastFret).contains(note.fret) else { return nil }
+                             return (fretLeft(note.fret) + fretWidth(note.fret) / 2) * scale
+                         }) {
                 Canvas { context, _ in
                     context.scaleBy(x: scale, y: scale)
                     let ink = palette.ink
@@ -165,7 +187,7 @@ struct FretboardView: View {
                         var wire = Path()
                         wire.move(to: CGPoint(x: left + fretWidth(fret), y: 14))
                         wire.addLine(to: CGPoint(x: left + fretWidth(fret), y: 104))
-                        context.stroke(wire, with: .color(ink.opacity(fret == 0 ? 0.8 : 0.35)), lineWidth: fret == 0 ? 3.5 : 1)
+                        context.stroke(wire, with: .color(ink.opacity(contrast == .increased ? 0.85 : (fret == 0 ? 0.8 : 0.35))), lineWidth: fret == 0 ? 3.5 : 1)
                         let markerYs: [CGFloat] = [12, 24].contains(fret) ? [45, 73] : ([3, 5, 7, 9, 15, 17, 19, 21].contains(fret) ? [59] : [])
                         for y in markerYs {
                             context.fill(Path(ellipseIn: CGRect(x: center - 3, y: y - 3, width: 6, height: 6)),
@@ -180,7 +202,7 @@ struct FretboardView: View {
                     for string in 1...6 {
                         let y = stringY(string)
                         let emphasized = emphasizedString == nil || emphasizedString == string
-                        let color = ink.opacity(emphasized ? 0.7 : 0.25)
+                        let color = ink.opacity(contrast == .increased ? (emphasized ? 1 : 0.65) : (emphasized ? 0.7 : 0.25))
                         context.draw(Text("\(string)  \(tuning[string - 1])").font(.system(size: 12, design: .monospaced))
                             .foregroundColor(color), at: CGPoint(x: 52, y: y), anchor: .trailing)
                         var line = Path()

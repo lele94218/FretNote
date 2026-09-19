@@ -4,6 +4,7 @@ struct NativeChoicePicker<Value: Hashable>: NSViewRepresentable {
     @Binding var selection: Value
     let options: [Value]
     let label: (Value) -> String
+    var accessibilityTitle: String = ""
     @Environment(\.interfaceScale) private var scale
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.isEnabled) private var enabled
@@ -44,6 +45,7 @@ struct NativeChoicePicker<Value: Hashable>: NSViewRepresentable {
         button.font = font
         button.menu?.font = font
         button.menu?.minimumWidth = 112
+        button.setAccessibilityLabel(accessibilityTitle)
         button.isEnabled = enabled && !options.isEmpty
         button.appearance = NSAppearance(named: colorScheme == .dark ? .darkAqua : .aqua)
         button.sizeToFit()

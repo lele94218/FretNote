@@ -3,44 +3,60 @@ import FretNoteCore
 
 struct ContentView: View {
     @EnvironmentObject private var appearance: AppearancePreferences
+    @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.interfaceScale) private var scale
-    private var palette: AppPalette { AppPalette(scheme: colorScheme) }
+    private var palette: AppPalette { AppPalette(scheme: colorScheme, contrast: contrast) }
     private var ink: Color { palette.ink }
     private var muted: Color { palette.muted }
     private var rule: Color { palette.rule }
     @ObservedObject var audio: AudioInput
     @ObservedObject var practice: PracticeStore
     var body: some View {
-        HStack(spacing: 0) {
-            ScrollView { sidebar }.frame(width: 230 * scale)
-            Rectangle().fill(rule).frame(width: 1)
-            ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
-                    header
-                    exercise
-                    ViewThatFits(in: .horizontal) {
-                        HStack(alignment: .top, spacing: 36) {
-                            inputPanel.frame(minWidth: 350 * scale)
-                            progressPanel.frame(width: 260 * scale)
-                        }
-                        VStack(alignment: .leading, spacing: 28) {
-                            inputPanel
-                            rule.frame(height: 1)
-                            progressPanel
-                        }
-                    }
-                    Text("标准调弦 · A4 = 440 Hz · 音频仅在本机处理")
-                        .font(.system(size: 12 * scale)).foregroundStyle(muted)
-                    if let error = practice.persistenceError { Text(error).font(.system(size: 12 * scale)).foregroundStyle(ink).textSelection(.enabled) }
-                }.padding(36)
+        HSplitView {
+            if appearance.sidebarVisible {
+                ScrollView { sidebar }
+                    .frame(minWidth: 250, idealWidth: 270, maxWidth: 330)
             }
+            VStack(spacing: 0) {
+                header.padding(.horizontal, 24).padding(.vertical, 16)
+                rule.frame(height: 1)
+                actionBar.padding(.horizontal, 24).padding(.vertical, 12)
+                if audio.running {
+                    HStack {
+                        Text(audio.reading.map { "听到 \(GuitarNote.names[($0.midi % 12 + 12) % 12])\($0.midi / 12 - 1)" } ?? "等待清晰的单音")
+                        Spacer()
+                        Text(audio.level > 0.8 ? "电平过高，请降低声卡增益" : (audio.level > 0 ? String(format: "输入 %.0f dB", 20 * log10(audio.level)) : "暂无输入信号"))
+                    }.font(.system(size: 12 * scale)).foregroundStyle(muted)
+                        .padding(.horizontal, 24).padding(.bottom, 12)
+                }
+                rule.frame(height: 1)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        if let error = audio.error {
+                            Text(error).foregroundStyle(ink).textSelection(.enabled)
+                            OpenSettingsButton()
+                        }
+                        exercise
+                        progressPanel
+                        Text("标准调弦 · A4 = 440 Hz · 音频仅在本机处理")
+                            .font(.system(size: 12 * scale)).foregroundStyle(muted)
+                        if let error = practice.persistenceError {
+                            Text(error).font(.system(size: 12 * scale)).textSelection(.enabled)
+                        }
+                    }.padding(24)
+                }
+            }.frame(minWidth: 600)
         }
         .background(palette.background)
         .foregroundStyle(ink)
         .font(.system(size: 13 * scale))
         .tint(ink)
-        .saturation(0)
+        .onChange(of: practice.feedback) { message in
+            guard NSWorkspace.shared.isVoiceOverEnabled else { return }
+            NSAccessibility.post(element: NSApplication.shared, notification: .announcementRequested,
+                userInfo: [.announcement: message, .priority: NSAccessibilityPriorityLevel.medium.rawValue])
+        }
         .sheet(isPresented: $practice.showSummary) {
             summary.preferredColorScheme(appearance.theme.colorScheme)
         }
@@ -50,7 +66,6 @@ struct ContentView: View {
             Text("FretNote")
                 .font(.system(size: 18 * scale, weight: .semibold))
                 .padding(.top, 10)
-            appearanceControls
             VStack(alignment: .leading, spacing: 8) {
                 eyebrow("练习")
                 ForEach(PracticeMode.allCases) { mode in
@@ -63,8 +78,11 @@ struct ContentView: View {
                             Spacer()
                             if practice.mode == mode { Text("—") }
                         }.padding(.vertical, 10).foregroundStyle(practice.mode == mode ? ink : muted)
+                            .padding(.horizontal, 8)
+                            .background(practice.mode == mode ? palette.selection : Color.clear, in: RoundedRectangle(cornerRadius: 6))
                             .contentShape(Rectangle())
                     }.buttonStyle(.plain).disabled(practice.active)
+                    .accessibilityAddTraits(practice.mode == mode ? [.isSelected] : [])
                 }
             }
             VStack(alignment: .leading, spacing: 17) {
@@ -72,14 +90,9 @@ struct ContentView: View {
                 if practice.mode != .melody {
                     ScaledPicker(title: "琴弦", selection: $practice.string, options: Array(1...6)) { "第 \($0) 弦" }
                 }
-                HStack {
-                    Text("品位").foregroundStyle(muted).fixedSize()
-                    Spacer()
-                    ScaledPicker(selection: $practice.lowerFret, options: Array(0...12)) { "\($0)" }
-                        .accessibilityLabel("起始品")
-                    Text("–").foregroundStyle(muted)
-                    ScaledPicker(selection: $practice.upperFret, options: Array(practice.lowerFret...min(17, practice.lowerFret + 5))) { "\($0)" }
-                        .accessibilityLabel("结束品")
+                VStack(spacing: 12) {
+                    HStack { Text("起始品"); Spacer(); ScaledPicker(accessibilityName: "起始品", selection: $practice.lowerFret, options: Array(0...12)) { "\($0)" }.accessibilityLabel("起始品") }
+                    HStack { Text("结束品"); Spacer(); ScaledPicker(accessibilityName: "结束品", selection: $practice.upperFret, options: Array(practice.lowerFret...min(17, practice.lowerFret + 5))) { "\($0)" }.accessibilityLabel("结束品") }
                 }
                 .onChange(of: practice.lowerFret) { value in practice.upperFret = min(max(practice.upperFret, value), value + 5) }
                 Toggle("只练自然音", isOn: $practice.naturalsOnly).toggleStyle(.checkbox).controlSize(.large)
@@ -95,29 +108,45 @@ struct ContentView: View {
                 .font(.system(size: 12 * scale)).foregroundStyle(muted).lineSpacing(5)
         }.padding(24)
     }
-    private var appearanceControls: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            ScaledPicker(title: "外观", selection: $appearance.theme, options: AppTheme.allCases) { $0.title }
-            HStack {
-                Text("字号")
-                Spacer()
-                Text("\(Int((appearance.fontScale * 100).rounded()))%")
-                    .monospacedDigit().foregroundStyle(muted)
-            }
-            Slider(value: Binding(get: { appearance.fontScale }, set: { appearance.setFontScale($0) }),
-                   in: 1...1.75, step: 0.05)
-                .accessibilityLabel("界面字号")
-                .accessibilityValue("\(Int((appearance.fontScale * 100).rounded()))%")
-            rule.frame(height: 1)
-        }.font(.system(size: 12 * scale)).controlSize(.large)
-    }
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(practice.mode.rawValue).font(.system(size: 22 * scale, weight: .medium))
+        HStack(spacing: 16) {
+            Button { appearance.sidebarVisible.toggle() } label: { Image(systemName: "sidebar.left") }
+                .accessibilityLabel(appearance.sidebarVisible ? "隐藏侧栏" : "显示侧栏")
+                .help("显示或隐藏侧栏（⌃⌘S）")
+            Text(practice.mode.rawValue).font(.system(size: 20 * scale, weight: .medium))
             Spacer()
-            Text(audio.running ? "正在监听" : "输入未开启")
-                .font(.system(size: 12 * scale)).foregroundStyle(muted)
-        }
+            OpenSettingsButton()
+        }.buttonStyle(.bordered)
+    }
+    private var actionBar: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 16) { listeningControls; Spacer(); practiceControls }
+            VStack(alignment: .leading, spacing: 12) {
+                listeningControls
+                HStack { Spacer(); practiceControls }
+            }
+        }.font(.system(size: 12 * scale)).controlSize(.large).buttonStyle(.bordered)
+    }
+    private var listeningControls: some View {
+        HStack(spacing: 10) {
+            Button(audio.starting ? "正在启动…" : (audio.running ? "停止监听" : "开启输入")) {
+                if audio.running { audio.stop() } else { Task { await audio.start() } }
+            }.disabled(audio.starting || audio.devices.isEmpty)
+            Text(audio.running ? "正在监听" : "输入未开启").foregroundStyle(muted)
+        }.fixedSize()
+    }
+    private var practiceControls: some View {
+        HStack(spacing: 10) {
+            if practice.active {
+                Button("提示位置") { practice.reveal() }.disabled(practice.completed)
+                Button("跳过") { practice.skip() }.disabled(practice.completed)
+                Button("结束练习") { practice.end() }
+            } else {
+                Button("开始练习") { practice.start() }
+                    .buttonStyle(.borderedProminent).disabled(!audio.running)
+                    .help(audio.running ? "开始一组 20 个音的练习（⌘Return）" : "先点击左侧“开启输入”")
+            }
+        }.fixedSize()
     }
     private var exercise: some View {
         VStack(spacing: 20) {
@@ -155,77 +184,8 @@ struct ContentView: View {
                               highlightedNote: practice.hint ? practice.target : nil,
                               emphasizedString: practice.mode == .melody ? nil : practice.string)
             }
-            Rectangle().fill(rule).frame(height: 1)
-            HStack {
-                if practice.active {
-                    Button("提示位置") { practice.reveal() }.disabled(practice.completed)
-                    Button("跳过") { practice.skip() }.disabled(practice.completed)
-                    Spacer()
-                    Button("结束练习") { practice.end() }.buttonStyle(MonoButtonStyle())
-                } else {
-                    Text("\(practice.mode == .names ? "音名 → 指板" : "五线谱 → 指板") · 单音练习")
-                        .font(.system(size: 12 * scale)).foregroundStyle(muted)
-                    Spacer()
-                    Button { practice.start() } label: {
-                        Text("开始练习")
-                    }.buttonStyle(MonoButtonStyle(prominent: true)).disabled(!audio.running)
-                }
-            }.buttonStyle(MonoButtonStyle())
         }.padding(.top, 8).padding(.bottom, 24)
             .overlay(alignment: .bottom) { rule.frame(height: 1) }
-    }
-    private var inputPanel: some View {
-        VStack(alignment: .leading, spacing: 15) {
-            HStack { eyebrow("音频输入"); Spacer(); Button { audio.refresh() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plain).disabled(audio.running || audio.starting).help("刷新音频设备") }
-            ScaledPicker(selection: $audio.selectedDevice, options: audio.devices.map(\.id)) { id in
-                audio.devices.first { $0.id == id }?.name ?? "无输入设备"
-            }.accessibilityLabel("音频设备").disabled(audio.running || audio.starting)
-                .onChange(of: audio.selectedDevice) { _ in audio.channel = 0 }
-            HStack {
-                ScaledPicker(title: "通道", selection: $audio.channel, options: Array(0..<max(1, audio.channelCount))) { "Input \($0 + 1)" }
-                    .disabled(audio.running || audio.starting)
-                Spacer()
-                Button(audio.starting ? "正在启动…" : (audio.running ? "停止监听" : "开始监听")) {
-                    if audio.running { audio.stop() } else { Task { await audio.start() } }
-                }.disabled(audio.starting || audio.devices.isEmpty)
-            }
-            HStack(spacing: 14) {
-                GeometryReader { geometry in
-                    ZStack(alignment: .leading) {
-                        Rectangle().fill(rule)
-                        Rectangle().fill(ink)
-                            .frame(width: geometry.size.width * max(0, min(1, (20 * log10(max(0.000001, audio.level)) + 60) / 60)))
-                    }
-                }.frame(height: 3)
-                Text(audio.level > 0 ? String(format: "%.0f dB", 20 * log10(audio.level)) : "— dB")
-                    .font(.system(size: 12 * scale, design: .monospaced)).foregroundStyle(muted).frame(width: 60 * scale)
-            }
-            if audio.level > 0.8 {
-                Text("输入电平过高，请降低声卡增益。").font(.system(size: 12 * scale, weight: .medium))
-            }
-            HStack(alignment: .firstTextBaseline) {
-                Text(detectedName).font(.system(size: 24 * scale, weight: .regular)).foregroundStyle(ink)
-                Spacer()
-                if let reading = audio.reading {
-                    Text(String(format: "%.1f Hz  %+.0f ¢", reading.frequency, reading.cents)).font(.system(size: 12 * scale, design: .monospaced)).foregroundStyle(muted)
-                } else { Text(audio.running ? "等待清晰的单音" : "连接声卡，选择吉他通道").font(.system(size: 12 * scale)).foregroundStyle(muted) }
-            }
-            HStack {
-                Text("噪声门").font(.system(size: 12 * scale)).foregroundStyle(muted)
-                Slider(value: $audio.gateDB, in: -65 ... -25, step: 1).disabled(audio.running || audio.starting)
-                Text("\(Int(audio.gateDB)) dB").font(.system(size: 12 * scale, design: .monospaced)).foregroundStyle(muted)
-            }
-            Text("使用干净音色；重复同音时，轻闷弦再拨。噪声门在停止监听后调整。")
-                .font(.system(size: 12 * scale)).foregroundStyle(muted).lineSpacing(3)
-            if let error = audio.error {
-                Text(error).font(.system(size: 12 * scale)).foregroundStyle(ink).textSelection(.enabled)
-                Button("打开麦克风权限设置") { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")!) }.font(.system(size: 12 * scale))
-            }
-        }.buttonStyle(MonoButtonStyle()).controlSize(.large)
-    }
-    private var detectedName: String {
-        guard let reading = audio.reading else { return "—" }
-        return "\(GuitarNote.names[(reading.midi % 12 + 12) % 12])\(reading.midi / 12 - 1)"
     }
     private var progressPanel: some View {
         VStack(alignment: .leading, spacing: 17) {
@@ -260,7 +220,7 @@ struct ContentView: View {
                 metric(practice.averageTime, caption: "平均找音时间")
             }
             Text("用过提示或跳过的音会优先安排复习。") .font(.system(size: 12 * scale)).foregroundStyle(muted)
-            Button("完成") { practice.showSummary = false }.buttonStyle(MonoButtonStyle(prominent: true))
+            Button("完成") { practice.showSummary = false }.buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
         }.padding(42).frame(width: 480 * scale).foregroundStyle(ink).background(palette.background)
     }
     private func eyebrow(_ text: String) -> some View { Text(text).font(.system(size: 12 * scale, weight: .medium)).foregroundStyle(muted) }
@@ -273,30 +233,10 @@ struct ContentView: View {
 }
 
 
-private struct MonoButtonStyle: ButtonStyle {
-    var prominent = false
-    @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.interfaceScale) private var scale
-    private var palette: AppPalette { AppPalette(scheme: colorScheme) }
-    private var ink: Color { palette.ink }
-    private var rule: Color { palette.rule }
-    @Environment(\.isEnabled) private var enabled
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 12 * scale, weight: .medium))
-            .padding(.horizontal, 14).padding(.vertical, 8)
-            .foregroundStyle(prominent ? palette.background : ink)
-            .background(prominent ? ink : palette.background)
-            .overlay(Rectangle().strokeBorder(prominent ? ink : rule, lineWidth: 1))
-            .opacity(enabled ? (configuration.isPressed ? 0.65 : 1) : 0.35)
-            .contentShape(Rectangle())
-    }
-}
-
-
 /// AppKit pop-up menus provide standard selection, keyboard navigation and dismissal.
-private struct ScaledPicker<Value: Hashable>: View {
+struct ScaledPicker<Value: Hashable>: View {
     var title: String? = nil
+    var accessibilityName: String? = nil
     @Binding var selection: Value
     let options: [Value]
     let label: (Value) -> String
@@ -304,10 +244,24 @@ private struct ScaledPicker<Value: Hashable>: View {
     var body: some View {
         HStack(spacing: 8) {
             if let title { Text(title).fixedSize() }
-            NativeChoicePicker(selection: $selection, options: options, label: label)
+            NativeChoicePicker(selection: $selection, options: options, label: label, accessibilityTitle: accessibilityName ?? title ?? label(selection))
                 .fixedSize()
                 .accessibilityLabel(title ?? label(selection))
         }
         .font(.system(size: 12 * scale))
+    }
+}
+
+struct OpenSettingsButton: View {
+    var body: some View {
+        Group {
+            if #available(macOS 14.0, *) {
+                SettingsLink { Image(systemName: "gearshape") }
+            } else {
+                Button { NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil) } label: {
+                    Image(systemName: "gearshape")
+                }
+            }
+        }.accessibilityLabel("设置").help("设置（⌘,）")
     }
 }
