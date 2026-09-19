@@ -7,7 +7,7 @@ struct FretNoteApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView(audio: audio, practice: practice)
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(.light)
                 .frame(minWidth: 1040, minHeight: 740)
                 .onAppear { audio.onNote = { [weak practice] midi in practice?.receive(midi) } }
                 .onChange(of: audio.running) { running in

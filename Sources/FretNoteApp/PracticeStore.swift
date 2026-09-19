@@ -14,7 +14,7 @@ final class PracticeStore: ObservableObject {
     @Published var index = 0
     @Published var active = false
     @Published var completed = false
-    @Published var feedback = "准备好后，开始今天的练习。"
+    @Published var feedback = "等待开始。"
     @Published var feedbackKind = 0
     @Published var hint = false
     @Published var progress: [String: NoteProgress] = [:]
@@ -70,7 +70,7 @@ final class PracticeStore: ObservableObject {
         notes = ExerciseGenerator.make(pool: pool, count: mode == .melody ? min(melodyLength, 20 - answered) : 1, progress: progress, excluding: previous)
         index = 0; completed = false; hint = false; wrong = false
         began = Date(); ignoreUntil = Date().addingTimeInterval(0.15)
-        feedback = notes.isEmpty ? "这个范围没有可练的音，请调整设置。" : "看清目标音，再轻轻拨弦。"
+        feedback = notes.isEmpty ? "这个范围没有可练的音，请调整设置。" : "请弹奏目标音。"
         feedbackKind = 0
         if notes.isEmpty { active = false }
     }
@@ -85,7 +85,7 @@ final class PracticeStore: ObservableObject {
         if midi == target.midi {
             let clean = !wrong && !hint
             finishNote(correct: clean, hinted: hint)
-            feedback = completed ? "这一题完成了！" : "正确，继续下一个音。"
+            feedback = completed ? "本题完成。" : "正确，继续下一个音。"
             feedbackKind = 1
         } else {
             wrong = true

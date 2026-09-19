@@ -5,8 +5,7 @@ struct StaffView: View {
     let notes: [GuitarNote]
     let current: Int
     let showNames: Bool
-    private let ink = Color(red: 0.83, green: 0.88, blue: 0.9)
-    private let mint = Color(red: 0.39, green: 0.89, blue: 0.74)
+    private let ink = Color.black
     var body: some View {
         Canvas { context, size in
             let highest = max(10, (notes.map(\.staffStep).max() ?? 8) + 2)
@@ -27,10 +26,9 @@ struct StaffView: View {
             for (i, note) in notes.enumerated() {
                 let x = start + available * CGFloat(i + 1) / CGFloat(notes.count + 1)
                 let y = bottom - CGFloat(note.staffStep) * spacing / 2
-                let color = i < current ? mint : (i == current ? Color.white : ink.opacity(0.6))
+                let color = i < current ? Color(white: 0.65) : ink
                 if i == current {
-                    context.fill(Path(roundedRect: CGRect(x: x - 27, y: 16, width: 54, height: size.height - 32), cornerRadius: 14), with: .color(mint.opacity(0.09)))
-                    context.fill(Path(ellipseIn: CGRect(x: x - 3, y: 7, width: 6, height: 6)), with: .color(mint))
+                    context.draw(Text("↓").font(.system(size: 20)).foregroundColor(ink), at: CGPoint(x: x, y: 10))
                 }
                 if note.staffStep < 0 {
                     for step in stride(from: -2, through: note.staffStep, by: -2) { ledger(&context, x: x, y: bottom - CGFloat(step) * spacing / 2, color: color) }
@@ -49,7 +47,7 @@ struct StaffView: View {
                 }
                 accidentals[note.staffStep] = !note.isNatural
                 if showNames {
-                    context.draw(Text(note.name).font(.system(size: 16, weight: .medium, design: .rounded)).foregroundColor(color), at: CGPoint(x: x, y: size.height - 22))
+                    context.draw(Text(note.name).font(.system(size: 16, weight: .medium)).foregroundColor(color), at: CGPoint(x: x, y: size.height - 22))
                 }
             }
         }
@@ -69,26 +67,26 @@ struct FretboardHint: View {
     var body: some View {
         VStack(spacing: 8) {
             Text("参考位置 · 第 \(note.string) 弦 · \(note.fret == 0 ? "空弦" : "第 \(note.fret) 品")")
-                .font(.system(size: 14, weight: .medium)).foregroundStyle(.mint)
+                .font(.system(size: 14, weight: .medium)).foregroundStyle(.black)
             Canvas { context, size in
                 let width = size.width - 36
                 let count = upper - lower + 1
                 for s in 1...6 {
                     let y = CGFloat(s - 1) * 13 + 15
                     var path = Path(); path.move(to: CGPoint(x: 18, y: y)); path.addLine(to: CGPoint(x: size.width - 18, y: y))
-                    context.stroke(path, with: .color(.white.opacity(0.25)), lineWidth: 0.6 + Double(s) * 0.15)
+                    context.stroke(path, with: .color(.black.opacity(0.25)), lineWidth: 0.6 + Double(s) * 0.15)
                 }
                 for f in 0...count {
                     let x = 18 + CGFloat(f) * width / CGFloat(count)
                     var path = Path(); path.move(to: CGPoint(x: x, y: 15)); path.addLine(to: CGPoint(x: x, y: 80))
-                    context.stroke(path, with: .color(.white.opacity(0.2)), lineWidth: 1)
+                    context.stroke(path, with: .color(.black.opacity(0.2)), lineWidth: 1)
                     if f < count {
                         context.draw(Text("\(lower + f)").font(.system(size: 10)).foregroundColor(.gray), at: CGPoint(x: x + width / CGFloat(count) / 2, y: 98))
                     }
                 }
                 let x = 18 + (CGFloat(note.fret - lower) + 0.5) * width / CGFloat(count)
                 let y = CGFloat(note.string - 1) * 13 + 15
-                context.fill(Path(ellipseIn: CGRect(x: x - 8, y: y - 8, width: 16, height: 16)), with: .color(.mint))
+                context.fill(Path(ellipseIn: CGRect(x: x - 8, y: y - 8, width: 16, height: 16)), with: .color(.black))
             }.frame(height: 110)
         }
     }

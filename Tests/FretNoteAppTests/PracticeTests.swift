@@ -70,10 +70,10 @@ final class PracticeTests: XCTestCase {
         for mode in PracticeMode.allCases {
             store.mode = mode
             store.notes = mode == .melody ? [GuitarNote(string: 3, fret: 0), GuitarNote(string: 3, fret: 2), GuitarNote(string: 2, fret: 0), GuitarNote(string: 3, fret: 2)] : [GuitarNote(string: 1, fret: 3)]
-            let view = ContentView(audio: audio, practice: store).preferredColorScheme(.dark).frame(width: 1160, height: 820)
+            let view = ContentView(audio: audio, practice: store).preferredColorScheme(.light).frame(width: 1160, height: 820)
             let host = NSHostingView(rootView: view)
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1160, height: 820), styleMask: [.borderless], backing: .buffered, defer: false)
-            window.appearance = NSAppearance(named: .darkAqua)
+            window.appearance = NSAppearance(named: .aqua)
             window.contentView = host
             window.orderFront(nil)
             try await Task.sleep(nanoseconds: 300_000_000)
