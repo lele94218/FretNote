@@ -99,6 +99,7 @@ struct ContentView: View {
                 if practice.mode != .melody {
                     ScaledPicker(title: "琴弦", selection: $practice.string, options: Array(1...6)) { "第 \($0) 弦" }
                 }
+                if practice.mode != .names {
                 VStack(spacing: 12) {
                     HStack { Text("起始品"); Spacer(); ScaledPicker(accessibilityName: "起始品", controlWidth: 72, selection: $practice.lowerFret, options: Array((practice.customRange ? 0 : 1)...(practice.customRange ? PracticeStore.maximumFret : PracticeStore.maximumFret - 3))) { "\($0)" }.accessibilityLabel("起始品") }
                     if practice.customRange {
@@ -109,6 +110,7 @@ struct ContentView: View {
                     }
                 }
                 Toggle("自定义范围", isOn: $practice.customRange).toggleStyle(.checkbox)
+                }
                 Toggle("只练自然音", isOn: $practice.naturalsOnly).toggleStyle(.checkbox).controlSize(.large)
                 if practice.mode != .names {
                     Toggle("显示音名辅助", isOn: $practice.showNames).toggleStyle(.checkbox).controlSize(.large)
@@ -166,7 +168,7 @@ struct ContentView: View {
     private var exercise: some View {
         VStack(spacing: 12) {
             HStack {
-                Text(practice.mode == .melody ? "第 \(practice.lowerFret)–\(practice.upperFret) 品" : "第 \(practice.string) 弦 · \(practice.lowerFret)–\(practice.upperFret) 品")
+                Text(practice.mode == .names ? "第 \(practice.string) 弦 · 全弦找音" : (practice.mode == .melody ? "第 \(practice.lowerFret)–\(practice.upperFret) 品" : "第 \(practice.string) 弦 · \(practice.lowerFret)–\(practice.upperFret) 品"))
                 Spacer()
                 Text("\(practice.answered) / 20 音").monospacedDigit()
             }.font(.system(size: 12 * scale)).foregroundStyle(muted)
@@ -177,7 +179,8 @@ struct ContentView: View {
                 VStack(spacing: gap) {
                     notation.frame(height: notationHeight)
                     if showsBoard {
-                        FretboardView(lower: practice.lowerFret, upper: practice.upperFret,
+                        FretboardView(lower: practice.mode == .names ? max(0, (practice.target?.fret ?? 1) - 1) : practice.lowerFret,
+                                      upper: practice.mode == .names ? min(PracticeStore.maximumFret, (practice.target?.fret ?? 1) + 2) : practice.upperFret,
                                       highlightedNote: practice.hint ? practice.target : nil,
                                       emphasizedString: practice.mode == .melody ? nil : practice.string)
                             .frame(height: max(0, space.size.height - notationHeight - gap))

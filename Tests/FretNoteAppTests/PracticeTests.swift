@@ -102,6 +102,36 @@ final class PracticeTests: XCTestCase {
         XCTAssertEqual(store.upperFret, 4)
     }
 
+    @MainActor
+    func testNamesUseWholeStringAndAcceptEitherOctave() async throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let store = PracticeStore(file: folder.appendingPathComponent("progress.json"))
+        store.string = 1
+        store.lowerFret = 18
+        store.naturalsOnly = false
+        XCTAssertEqual(store.exercisePool.map(\.fret), Array(0...21))
+        XCTAssertTrue(store.exercisePool.allSatisfy { $0.string == 1 })
+        store.start()
+        store.notes = [GuitarNote(string: 1, fret: 3)]
+        try await Task.sleep(nanoseconds: 170_000_000)
+        store.receive(43) // G below this string's range must not pass.
+        XCTAssertEqual(store.index, 0)
+        store.receive(GuitarNote(string: 1, fret: 15).midi)
+        XCTAssertEqual(store.answered, 1)
+        XCTAssertNotNil(store.progress["1:15"])
+        XCTAssertNil(store.progress["1:3"])
+        store.end()
+        store.mode = .staff
+        XCTAssertEqual(store.exercisePool.map(\.fret), Array(18...21))
+        store.start()
+        store.notes = [GuitarNote(string: 1, fret: 3)]
+        try await Task.sleep(nanoseconds: 170_000_000)
+        store.receive(GuitarNote(string: 1, fret: 15).midi)
+        XCTAssertEqual(store.index, 0) // Staff mode still requires the written octave.
+        store.end()
+    }
+
     /// Optional offscreen UI render: FRETNOTE_SNAPSHOT_DIR=/tmp/... swift test --filter testRender
     @MainActor
     func testRender() async throws {

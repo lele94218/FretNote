@@ -81,9 +81,15 @@ final class PracticeStore: ObservableObject {
         feedback = "练习已暂停。已完成的音符已保存。"
         feedbackKind = 0
     }
+    var exercisePool: [GuitarNote] {
+        ExerciseGenerator.pool(string: mode == .melody ? nil : string,
+                               lower: mode == .names ? 0 : lowerFret,
+                               upper: mode == .names ? Self.maximumFret : upperFret,
+                               naturalsOnly: naturalsOnly)
+    }
     func nextExercise() {
         let previous = notes.last?.id
-        let pool = ExerciseGenerator.pool(string: mode == .melody ? nil : string, lower: lowerFret, upper: upperFret, naturalsOnly: naturalsOnly)
+        let pool = exercisePool
         notes = ExerciseGenerator.make(pool: pool, count: mode == .melody ? min(melodyLength, 20 - answered) : 1, progress: progress, excluding: previous)
         index = 0; completed = false; hint = false; wrong = false
         began = Date(); ignoreUntil = Date().addingTimeInterval(0.15)
@@ -99,7 +105,15 @@ final class PracticeStore: ObservableObject {
     }
     func receive(_ midi: Int) {
         guard active, !completed, Date() >= ignoreUntil, let target else { return }
-        if midi == target.midi {
+        let playedFret = midi - GuitarNote.openMIDI[string - 1]
+        let correct = mode == .names
+            ? (0...Self.maximumFret).contains(playedFret) && midi % 12 == target.midi % 12
+            : midi == target.midi
+        if correct {
+            if mode == .names {
+                // Credit the sounding octave on the requested string, not a hidden target octave.
+                notes[index] = GuitarNote(string: string, fret: playedFret)
+            }
             let clean = !wrong && !hint
             finishNote(correct: clean, hinted: hint)
             feedback = completed ? "本题完成。" : "正确，继续下一个音。"
