@@ -111,15 +111,14 @@ struct FretboardView: View {
     private var palette: AppPalette { AppPalette(scheme: colorScheme, contrast: contrast) }
     private var firstFret: Int { max(0, lower - 1) }
     private var lastFret: Int { min(PracticeStore.maximumFret, upper + 1) }
-    private let tuning = ["E4", "B3", "G3", "D3", "A2", "E2"]
     private func fretWidth(_ fret: Int) -> CGFloat {
         fret == 0 ? 40 : 72 * pow(2, -Double(fret - 1) / 12)
     }
     private func fretLeft(_ fret: Int) -> CGFloat {
-        (firstFret..<fret).reduce(CGFloat(64)) { $0 + fretWidth($1) }
+        (firstFret..<fret).reduce(CGFloat(14)) { $0 + fretWidth($1) }
     }
     private var right: CGFloat { fretLeft(lastFret) + fretWidth(lastFret) }
-    private var neckLeft: CGFloat { firstFret == 0 ? fretLeft(1) : 64 }
+    private var neckLeft: CGFloat { firstFret == 0 ? fretLeft(1) : 14 }
     private func stringY(_ string: Int) -> CGFloat { 24 + CGFloat(string - 1) * 14 }
 
     var body: some View {
@@ -133,58 +132,79 @@ struct FretboardView: View {
                 VStack(alignment: .leading, spacing: 5) { rangeLabel; hintLabel }
             }
             .font(.system(size: 12 * scale)).foregroundStyle(palette.muted)
-            FixedDiagram(size: CGSize(width: (right + 14) * scale, height: 140 * scale)) {
+            FixedDiagram(size: CGSize(width: (right + 14) * scale, height: 144 * scale)) {
                 Canvas { context, _ in
                     context.scaleBy(x: scale, y: scale)
                     let ink = palette.ink
-                    let selectionLeft = fretLeft(lower)
-                    let selectionRight = fretLeft(upper) + fretWidth(upper)
-                    context.fill(Path(CGRect(x: selectionLeft, y: 14, width: selectionRight - selectionLeft, height: 90)),
-                                 with: .color(palette.selection))
-                    // Neck edges and fret wires. The left boundary is the nut only at fret zero.
-                    var edges = Path()
-                    edges.move(to: CGPoint(x: neckLeft, y: 14))
-                    edges.addLine(to: CGPoint(x: right, y: 14))
-                    edges.move(to: CGPoint(x: neckLeft, y: 104))
-                    edges.addLine(to: CGPoint(x: right, y: 104))
-                    context.stroke(edges, with: .color(ink.opacity(0.3)), lineWidth: 1)
+                    let neck = Path { path in
+                        path.move(to: CGPoint(x: neckLeft, y: 14))
+                        path.addLine(to: CGPoint(x: right, y: 10))
+                        path.addLine(to: CGPoint(x: right, y: 108))
+                        path.addLine(to: CGPoint(x: neckLeft, y: 104))
+                        path.closeSubpath()
+                    }
+                    // Matte ebony, with a slightly widening neck rather than a boxed grid.
+                    context.fill(neck, with: .color(Color(white: colorScheme == .dark ? 0.16 : 0.12)))
+                    for edge in [0, 1] {
+                        var binding = Path()
+                        binding.move(to: CGPoint(x: neckLeft, y: edge == 0 ? 15 : 103))
+                        binding.addLine(to: CGPoint(x: right, y: edge == 0 ? 11 : 107))
+                        context.stroke(binding, with: .color(Color(white: 0.38)), lineWidth: 1.2)
+                    }
                     for fret in firstFret...lastFret {
                         let left = fretLeft(fret)
                         let center = left + fretWidth(fret) / 2
                         let inRange = (lower...upper).contains(fret)
-                        context.draw(Text(fret == 0 ? "空弦" : "\(fret)").font(.system(size: 12))
-                            .foregroundColor(inRange ? ink : palette.muted), at: CGPoint(x: center, y: 126))
-                        var wire = Path()
-                        wire.move(to: CGPoint(x: left + fretWidth(fret), y: 14))
-                        wire.addLine(to: CGPoint(x: left + fretWidth(fret), y: 104))
-                        context.stroke(wire, with: .color(ink.opacity(contrast == .increased ? 0.85 : (fret == 0 ? 0.8 : 0.35))), lineWidth: fret == 0 ? 3.5 : 1)
-                        let markerYs: [CGFloat] = [12, 24].contains(fret) ? [45, 73] : ([3, 5, 7, 9, 15, 17, 19, 21].contains(fret) ? [59] : [])
+                        context.draw(Text(fret == 0 ? "空弦" : "\(fret)").font(.system(size: 11))
+                            .foregroundColor(inRange ? ink : palette.muted), at: CGPoint(x: center, y: 132))
+                        let x = left + fretWidth(fret)
+                        let taper = max(0, (x - neckLeft) / (right - neckLeft)) * 4
+                        let wireWidth: CGFloat = fret == 0 ? 4.5 : 2.3
+                        let wire = Path(roundedRect: CGRect(x: x - wireWidth / 2, y: 14 - taper,
+                                                           width: wireWidth, height: 90 + taper * 2),
+                                        cornerRadius: wireWidth / 2)
+                        context.fill(wire, with: .color(Color(white: fret == 0 ? 0.88 : 0.48)))
+                        var shine = Path()
+                        shine.move(to: CGPoint(x: x - 0.35, y: 15 - taper))
+                        shine.addLine(to: CGPoint(x: x - 0.35, y: 103 + taper))
+                        context.stroke(shine, with: .color(Color(white: 0.77)), lineWidth: 0.65)
+                        let markerYs: [CGFloat] = fret == 12 ? [45, 73] : ([3, 5, 7, 9, 15, 17, 19, 21].contains(fret) ? [59] : [])
                         for y in markerYs {
-                            context.fill(Path(ellipseIn: CGRect(x: center - 3, y: y - 3, width: 6, height: 6)),
-                                         with: .color(ink.opacity(0.22)))
+                            context.fill(Path(ellipseIn: CGRect(x: center - 3.8, y: y - 3.8, width: 7.6, height: 7.6)),
+                                         with: .color(Color(white: 0.68)))
                         }
                     }
-                    if firstFret > 0 {
-                        var edge = Path()
-                        edge.move(to: CGPoint(x: 64, y: 14)); edge.addLine(to: CGPoint(x: 64, y: 104))
-                        context.stroke(edge, with: .color(ink.opacity(0.3)), lineWidth: 1)
-                    }
+                    // Strings sit above the fret wires. Wound bass strings are visibly thicker.
                     for string in 1...6 {
                         let y = stringY(string)
                         let emphasized = emphasizedString == nil || emphasizedString == string
-                        let color = ink.opacity(contrast == .increased ? (emphasized ? 1 : 0.65) : (emphasized ? 0.7 : 0.25))
-                        context.draw(Text("\(string)  \(tuning[string - 1])").font(.system(size: 12, design: .monospaced))
-                            .foregroundColor(color), at: CGPoint(x: 52, y: y), anchor: .trailing)
+                        let gauge: CGFloat = [0.65, 0.8, 1.05, 1.5, 2.0, 2.6][string - 1]
+                        var shadow = Path()
+                        shadow.move(to: CGPoint(x: 14, y: y + 1.2))
+                        shadow.addLine(to: CGPoint(x: right, y: y + 1.2))
+                        context.stroke(shadow, with: .color(.black.opacity(0.55)), lineWidth: gauge + 0.8)
                         var line = Path()
-                        line.move(to: CGPoint(x: 64, y: y)); line.addLine(to: CGPoint(x: right, y: y))
-                        context.stroke(line, with: .color(color), lineWidth: 0.5 + Double(string) * 0.18)
+                        line.move(to: CGPoint(x: 14, y: y))
+                        line.addLine(to: CGPoint(x: right, y: y))
+                        context.stroke(line, with: .color(Color(white: emphasized ? 0.72 : 0.4)), lineWidth: gauge)
+                        context.stroke(line, with: .color(Color(white: emphasized ? 0.96 : 0.55)), lineWidth: max(0.35, gauge * 0.28))
+                        if firstFret == 0 {
+                            var openString = Path()
+                            openString.move(to: CGPoint(x: 14, y: y))
+                            openString.addLine(to: CGPoint(x: neckLeft - 2.5, y: y))
+                            context.stroke(openString, with: .color(ink.opacity(emphasized ? 0.7 : 0.35)), lineWidth: gauge)
+                        }
                     }
+                    let selectionLeft = fretLeft(lower)
+                    let selectionRight = fretLeft(upper) + fretWidth(upper)
+                    let range = Path(roundedRect: CGRect(x: selectionLeft, y: 116, width: selectionRight - selectionLeft, height: 2), cornerRadius: 1)
+                    context.fill(range, with: .color(ink))
                     if let note = highlightedNote, (firstFret...lastFret).contains(note.fret), (1...6).contains(note.string) {
                         let x = fretLeft(note.fret) + fretWidth(note.fret) / 2
                         let y = stringY(note.string)
                         let dot = Path(ellipseIn: CGRect(x: x - 6, y: y - 6, width: 12, height: 12))
-                        context.fill(dot, with: .color(note.fret == 0 ? palette.background : ink))
-                        if note.fret == 0 { context.stroke(dot, with: .color(ink), lineWidth: 1.5) }
+                        context.fill(dot, with: .color(note.fret == 0 ? palette.background : .white))
+                        context.stroke(dot, with: .color(note.fret == 0 ? ink : .black), lineWidth: 1.5)
                     }
                 }
             }
@@ -199,7 +219,7 @@ struct FretboardView: View {
         Group {
             if let note = highlightedNote {
                 Text("参考位置：\(note.string) 弦 · \(note.fret == 0 ? "空弦" : "第 \(note.fret) 品")")
-            } else { Text("灰色区域为练习范围") }
+            } else { Text("一弦在上 · 六弦在下") }
         }.fixedSize()
     }
 }
