@@ -57,11 +57,7 @@ struct ContentView: View {
                 userInfo: [.announcement: message, .priority: NSAccessibilityPriorityLevel.medium.rawValue])
         }
         .sheet(isPresented: $showProgress) {
-            VStack(spacing: 20) {
-                progressPanel
-                Button("完成") { showProgress = false }.keyboardShortcut(.defaultAction)
-            }.padding(24).frame(width: 440 * scale)
-                .foregroundStyle(ink).background(palette.background)
+            LearningHistoryView(practice: practice)
                 .preferredColorScheme(appearance.theme.colorScheme)
         }
         .alert("需要处理的问题", isPresented: $showError) {
@@ -229,30 +225,6 @@ struct ContentView: View {
                 StaffView(notes: practice.notes, current: practice.index, showNames: practice.showNames)
             }
         }
-    }
-    private var progressPanel: some View {
-        VStack(alignment: .leading, spacing: 17) {
-            eyebrow("学习记录")
-            HStack {
-                metric(practice.accuracy, caption: "本组首次正确")
-                Spacer()
-                metric(practice.averageTime, caption: "平均找音时间")
-            }
-            rule.frame(height: 1)
-            Text("优先复习").font(.system(size: 12 * scale, weight: .medium))
-            if practice.weakNotes.isEmpty {
-                Text("暂无记录")
-                    .font(.system(size: 12 * scale)).foregroundStyle(muted).lineSpacing(5)
-            } else {
-                ForEach(Array(practice.weakNotes.prefix(3)), id: \.note.id) { item in
-                    HStack {
-                        Text("\(item.note.string) 弦 · \(item.note.name)")
-                        Spacer()
-                        Text("\(Int(item.score.accuracy * 100))%").foregroundStyle(muted).monospacedDigit()
-                    }.font(.system(size: 12 * scale))
-                }
-            }
-        }.frame(maxWidth: .infinity, alignment: .leading)
     }
     private var summary: some View {
         VStack(spacing: 24) {

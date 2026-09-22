@@ -49,6 +49,8 @@ final class PracticeStore: ObservableObject {
     @Published var feedbackKind = 0
     @Published var hint = false
     @Published var progress: [String: NoteProgress] = [:]
+    @Published private(set) var sessions: [LearningSession] = []
+    private var session: LearningSession?
     @Published var answered = 0
     @Published var firstCorrect = 0
     @Published var totalSeconds = 0.0
@@ -75,7 +77,17 @@ final class PracticeStore: ObservableObject {
             .appendingPathComponent("FretNote/progress.json")
         let file = self.file
         if FileManager.default.fileExists(atPath: file.path) {
-            do { progress = try JSONDecoder().decode([String: NoteProgress].self, from: Data(contentsOf: file)) }
+            do {
+                let data = try Data(contentsOf: file)
+                let decoder = JSONDecoder()
+                if let archive = try? decoder.decode(LearningArchive.self, from: data) {
+                    guard archive.version == 1 else { throw CocoaError(.coderReadCorrupt) }
+                    progress = archive.progress
+                    sessions = archive.sessions
+                } else {
+                    progress = try decoder.decode([String: NoteProgress].self, from: data)
+                }
+            }
             catch {
                 canSave = false
                 persistenceError = "学习记录读取失败，原文件已保留，本次不会覆盖：\(file.path)"
@@ -83,6 +95,8 @@ final class PracticeStore: ObservableObject {
         }
     }
     func start() {
+        if active { end() }
+        session = LearningSession(mode: mode.rawValue, scope: (mode == .names ? "\(selectedStringLabel) · 0–21 品" : "六根弦 · \(lowerFret)–\(upperFret) 品") + (naturalsOnly ? " · 自然音" : " · 全部音"))
         nextTask?.cancel()
         answered = 0; firstCorrect = 0; totalSeconds = 0
         showSummary = false; active = true
@@ -91,6 +105,12 @@ final class PracticeStore: ObservableObject {
     func end() {
         nextTask?.cancel()
         active = false
+        if var current = session, current.answered > 0 {
+            current.endedAt = Date()
+            updateSession(current)
+            save()
+        }
+        session = nil
         showSummary = answered > 0
         feedback = "练习已暂停。已完成的音符已保存。"
         feedbackKind = 0
@@ -118,7 +138,7 @@ final class PracticeStore: ObservableObject {
     func reveal() { guard active, !completed else { return }; hint = true }
     func skip() {
         guard active, !completed, target != nil else { return }
-        finishNote(correct: false, hinted: true)
+        finishNote(correct: false, hinted: hint, skipped: true)
         feedback = "已记为待复习，下次再试。"; feedbackKind = 0
     }
     func receive(_ midi: Int) {
@@ -142,7 +162,7 @@ final class PracticeStore: ObservableObject {
             feedbackKind = -1
         }
     }
-    private func finishNote(correct: Bool, hinted: Bool) {
+    private func finishNote(correct: Bool, hinted: Bool, skipped: Bool = false) {
         guard let target else { return }
         let seconds = Date().timeIntervalSince(began)
         var record = progress[target.id] ?? NoteProgress()
@@ -150,6 +170,15 @@ final class PracticeStore: ObservableObject {
         progress[target.id] = record
         answered += 1; if correct { firstCorrect += 1 }
         totalSeconds += seconds
+        if var current = session {
+            current.answered += 1
+            if correct { current.firstCorrect += 1 }
+            if hinted { current.hints += 1 }
+            if skipped { current.skipped += 1 }
+            current.totalSeconds += seconds
+            session = current
+            updateSession(current)
+        }
         save()
         index += 1; hint = false; wrong = false; began = Date()
         ignoreUntil = Date().addingTimeInterval(0.1)
@@ -162,12 +191,17 @@ final class PracticeStore: ObservableObject {
             }
         }
     }
+    private func updateSession(_ current: LearningSession) {
+        if let index = sessions.firstIndex(where: { $0.id == current.id }) {
+            sessions[index] = current
+        } else { sessions.insert(current, at: 0) }
+    }
     private func save() {
         guard canSave else { return }
         do {
             try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
             let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            try encoder.encode(progress).write(to: file, options: .atomic)
+            try encoder.encode(LearningArchive(progress: progress, sessions: sessions)).write(to: file, options: .atomic)
             persistenceError = nil
         } catch { persistenceError = "记录保存失败：\(error.localizedDescription)" }
     }
