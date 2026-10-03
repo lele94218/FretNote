@@ -13,6 +13,7 @@ LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchS
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/FretNote" "$APP/Contents/MacOS/FretNote"
 cp -R "$BIN_DIR/FretNote_FretNoteApp.bundle" "$APP/Contents/Resources/"
+cp LICENSE "$APP/Contents/Resources/LICENSE.txt"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 swift scripts/make-icon.swift "$PWD/dist/AppIcon.iconset"
 iconutil -c icns "$PWD/dist/AppIcon.iconset" -o "$APP/Contents/Resources/AppIcon.icns"
