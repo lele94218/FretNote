@@ -58,7 +58,7 @@
 ```bash
 swift test
 bash scripts/build-app.sh
-open dist/FretNote.app
+open "$HOME/Applications/FretNote.app"
 ```
 
 请使用打包后的 `.app` 进行音频测试，确保应用身份和麦克风用途说明正确。构建产物为本机架构，采用本机临时签名，未进行 Developer ID 公证。更新签名后，macOS 可能要求重新授权麦克风。
@@ -78,7 +78,7 @@ Sources/FretNoteCore/       音高识别、音符门控、指板映射、题目�
 Sources/FretNoteApp/        SwiftUI 界面、五线谱、Core Audio 输入、本地记录
 Tests/                     合成音频与练习状态测试
 Resources/Info.plist        应用信息与音频权限声明
-scripts/build-app.sh        本机应用打包
+scripts/build-app.sh        本机应用打包并安装
 scripts/make-icon.swift     可复现的应用图标绘制
 Resources/AppIcon.svg      图标矢量源文件
 ```
@@ -97,3 +97,5 @@ Resources/AppIcon.svg      图标矢量源文件
 - 增加降号、调号及更多把位练习。
 
 五线谱使用 [Steinberg Bravura](https://github.com/steinbergmedia/bravura) 字体及其 SMuFL 元数据。音头、八度高音谱号、升降号使用同一套字形；符干按连接锚点和 3.5 个谱线间距绘制。字体、元数据及许可证位于 `Sources/FretNoteApp/Resources/`，随应用打包。
+
+打包脚本将应用安装到 `~/Applications/FretNote.app`，中间产物在隐藏的 `.build` 目录中生成并自动清理。旧的 `dist/FretNote.app` 会在安装成功后移除，避免系统显示两个应用入口；学习记录仍保存在原来的 Application Support 目录。
