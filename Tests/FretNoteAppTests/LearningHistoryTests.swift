@@ -73,9 +73,11 @@ final class LearningHistoryTests: XCTestCase {
         let file = folder.appendingPathComponent("fixture-\(UUID().uuidString).json")
         defer { try? FileManager.default.removeItem(at: file) }
         var score = NoteProgress()
-        score.record(correct: true, seconds: 3, hinted: false)
+        for index in 0..<60 {
+            score.record(correct: index % 20 < 17, seconds: 3, hinted: index % 20 >= 18)
+        }
         let sessions = PracticeMode.allCases.map { mode in
-            LearningSession(mode: mode.rawValue, scope: "六根弦 · 1–4 品 · 自然音", answered: 20, firstCorrect: 17, totalSeconds: 60, hints: 2, skipped: 1)
+            LearningSession(mode: mode.rawValue, scope: mode == .names ? "1 弦 · 0–21 品 · 自然音" : "六根弦 · 1–4 品 · 自然音", answered: 20, firstCorrect: 17, totalSeconds: 60, hints: 2, skipped: 1)
         }
         try JSONEncoder().encode(LearningArchive(progress: ["1:3": score], sessions: sessions)).write(to: file)
         let store = PracticeStore(file: file)

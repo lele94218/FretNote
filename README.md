@@ -11,6 +11,22 @@ Connect a guitar through an audio interface, read the note, and play it. FretNot
 
 [Download for macOS](https://github.com/lele94218/FretNote/releases/latest) · [Report an issue](https://github.com/lele94218/FretNote/issues)
 
+## Screenshots
+
+Actual app views rendered with demo data; no personal learning records are shown.
+
+### Sight-reading · Light
+
+![Sight-reading with staff notation and a six-string fretboard](docs/screenshots/sight-reading-light.jpg)
+
+### Melody and position hint · Dark
+
+![Short melody with the current note highlighted on the fretboard](docs/screenshots/fretboard-dark.jpg)
+
+### Learning history
+
+![Learning history with cumulative statistics and session results](docs/screenshots/learning-history.jpg)
+
 ## Features
 
 - **Note-name practice:** choose one or more strings. Each question specifies a string; find the named note anywhere from the open string to fret 21. Any playable octave of that note on the requested string is accepted.

@@ -218,6 +218,7 @@ final class PracticeTests: XCTestCase {
             store.customRange = true
             store.lowerFret = lower; store.upperFret = upper; store.hint = hint
             store.notes = mode == .melody ? [GuitarNote(string: 3, fret: lower), GuitarNote(string: 3, fret: lower + 2), GuitarNote(string: 2, fret: lower), GuitarNote(string: 3, fret: lower + 2)] : [GuitarNote(string: 1, fret: 3)]
+            store.naturalsOnly = store.notes.allSatisfy(\.isNatural)
             let view = ContentView(audio: audio, practice: store)
                 .environmentObject(appearance)
                 .environment(\.interfaceScale, scale)
