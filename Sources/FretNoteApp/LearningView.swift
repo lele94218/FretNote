@@ -154,7 +154,8 @@ struct LearningView: View {
     private var gallery: some View {
         GeometryReader { space in
             let columns = space.size.width >= 780 && scale <= 1.25 ? 2 : 1
-            let rows = max(1, Int((space.size.height - 46) / (180 + 24 * scale)))
+            let diagramHeight: CGFloat = scale > 1.25 ? 128 : 144
+            let rows = max(1, Int((space.size.height - 46) / (diagramHeight + 36 + 24 * scale)))
             let count = columns * rows
             let examples = store.catalog
             let pages = max(1, (examples.count + count - 1) / count)
@@ -172,7 +173,7 @@ struct LearningView: View {
                             Text("根音 \(example.shape.root.string) 弦 · " + example.shape.tones.map(\.name).joined(separator: " · "))
                                 .font(.system(size: 11 * scale)).foregroundStyle(palette.muted)
                             FretboardView(lower: example.shape.lower, upper: max(example.shape.lower + 1, example.shape.upper), learningTones: example.shape.tones, showsCaption: false)
-                                .frame(height: 144)
+                                .frame(height: diagramHeight)
                                 .environment(\.interfaceScale, min(scale, 1.25))
                             Divider()
                         }
