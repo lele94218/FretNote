@@ -27,7 +27,8 @@ final class LearningStore: ObservableObject {
 
 struct LearningView: View {
     @ObservedObject var store: LearningStore
-    let leave: () -> Void
+    @ObservedObject var practice: PracticeStore
+    @ObservedObject var audio: AudioInput
     @EnvironmentObject private var appearance: AppearancePreferences
     @Environment(\.interfaceScale) private var scale
     @Environment(\.colorScheme) private var scheme
@@ -42,9 +43,8 @@ struct LearningView: View {
                 HStack {
                     Button { appearance.sidebarVisible.toggle() } label: { Image(systemName: "sidebar.left") }
                         .accessibilityLabel("显示或隐藏侧栏")
-                    Text("学习").font(.system(size: 20 * scale, weight: .medium))
+                    Text(store.arpeggio ? "琶音练习" : "和弦练习").font(.system(size: 20 * scale, weight: .medium))
                     Spacer()
-                    Button("返回练习", action: leave)
                     OpenSettingsButton()
                 }.buttonStyle(.bordered)
                 Divider()
@@ -91,12 +91,8 @@ struct LearningView: View {
         .foregroundStyle(palette.ink).background(palette.background).tint(palette.ink)
     }
     private var controls: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Text("指板学习").font(.system(size: 16 * scale, weight: .medium))
-            Picker("学习内容", selection: $store.arpeggio) {
-                Text("和弦").tag(false)
-                Text("琶音").tag(true)
-            }.pickerStyle(.segmented)
+        VStack(alignment: .leading, spacing: 12) {
+            ExerciseNavigation(practice: practice, audio: audio, learning: store)
             Picker("材料", selection: $store.shell) {
                 Text("135").tag(false)
                 Text("137").tag(true)
@@ -135,11 +131,54 @@ struct LearningView: View {
             }
             Toggle("包含空弦", isOn: $store.includeOpen).toggleStyle(.checkbox)
             Spacer(minLength: 8)
-            Text("只看指板，无需输入")
+            Text("学习模式 · 无需输入")
                 .font(.system(size: 12 * scale)).foregroundStyle(palette.muted)
         }.padding(20)
     }
     private func row<Control: View>(_ title: String, @ViewBuilder control: () -> Control) -> some View {
         HStack { Text(title).foregroundStyle(palette.muted); Spacer(minLength: 6); control() }
+    }
+}
+
+/// The same peer navigation is present in every exercise screen.
+struct ExerciseNavigation: View {
+    @ObservedObject var practice: PracticeStore
+    @ObservedObject var audio: AudioInput
+    @ObservedObject var learning: LearningStore
+    @Environment(\.interfaceScale) private var scale
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.colorSchemeContrast) private var contrast
+    private var palette: AppPalette { AppPalette(scheme: scheme, contrast: contrast) }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("练习").font(.system(size: 12 * scale, weight: .medium)).foregroundStyle(palette.muted)
+            ForEach(PracticeMode.allCases) { mode in
+                item(mode.rawValue, selected: !practice.learning && practice.mode == mode) {
+                    practice.setLearning(false, audio: audio)
+                    practice.mode = mode
+                    practice.notes = []
+                }
+            }
+            item("和弦练习", selected: practice.learning && !learning.arpeggio) {
+                learning.arpeggio = false
+                practice.setLearning(true, audio: audio)
+            }
+            item("琶音练习", selected: practice.learning && learning.arpeggio) {
+                learning.arpeggio = true
+                practice.setLearning(true, audio: audio)
+            }
+        }.disabled(practice.active)
+    }
+    private func item(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Text(title).font(.system(size: 14 * scale, weight: .medium))
+                Spacer()
+                if selected { Text("—") }
+            }.padding(.vertical, 5).padding(.horizontal, 8)
+                .foregroundStyle(selected ? palette.ink : palette.muted)
+                .background(selected ? palette.selection : Color.clear, in: RoundedRectangle(cornerRadius: 6))
+                .contentShape(Rectangle())
+        }.buttonStyle(.plain).accessibilityAddTraits(selected ? [.isSelected] : [])
     }
 }

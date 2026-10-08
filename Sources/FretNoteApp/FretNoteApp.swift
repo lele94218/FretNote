@@ -25,10 +25,6 @@ struct FretNoteApp: App {
                     .keyboardShortcut("s", modifiers: [.command, .control])
             }
             CommandMenu("练习") {
-                Button(practice.learning ? "返回练习" : "指板学习") {
-                    practice.setLearning(!practice.learning, audio: audio)
-                }.keyboardShortcut("l", modifiers: [.command, .shift])
-                Divider()
                 Button(practice.active ? "结束练习" : "开始练习") {
                     if practice.active { practice.end() } else { practice.start() }
                 }.keyboardShortcut(.return, modifiers: .command)

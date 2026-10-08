@@ -18,7 +18,7 @@ struct ContentView: View {
     var body: some View {
         Group {
             if practice.learning {
-                LearningView(store: learningStore) { practice.setLearning(false, audio: audio) }
+                LearningView(store: learningStore, practice: practice, audio: audio)
             } else { practiceBody }
         }
     }
@@ -78,30 +78,8 @@ struct ContentView: View {
         }
     }
     private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Button { practice.setLearning(true, audio: audio) } label: {
-                Label("指板学习", systemImage: "book")
-                    .font(.system(size: 14 * scale, weight: .medium))
-            }.buttonStyle(.plain).padding(.horizontal, 8)
-            VStack(alignment: .leading, spacing: 8) {
-                eyebrow("练习")
-                ForEach(PracticeMode.allCases) { mode in
-                    Button {
-                        practice.mode = mode
-                        practice.notes = []
-                    } label: {
-                        HStack(spacing: 12) {
-                            Text(mode.rawValue).font(.system(size: 14 * scale, weight: .medium))
-                            Spacer()
-                            if practice.mode == mode { Text("—") }
-                        }.padding(.vertical, 7).foregroundStyle(practice.mode == mode ? ink : muted)
-                            .padding(.horizontal, 8)
-                            .background(practice.mode == mode ? palette.selection : Color.clear, in: RoundedRectangle(cornerRadius: 6))
-                            .contentShape(Rectangle())
-                    }.buttonStyle(.plain).disabled(practice.active)
-                    .accessibilityAddTraits(practice.mode == mode ? [.isSelected] : [])
-                }
-            }
+        VStack(alignment: .leading, spacing: 12) {
+            ExerciseNavigation(practice: practice, audio: audio, learning: learningStore)
             VStack(alignment: .leading, spacing: 12) {
                 eyebrow("练习范围")
                 if practice.mode == .names {

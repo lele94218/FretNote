@@ -43,7 +43,7 @@ The app interface is currently in **Simplified Chinese**. Documentation is avail
 
 ## Download and install
 
-Download `FretNote-v0.3.0-macOS-arm64.zip` from [Releases](https://github.com/lele94218/FretNote/releases/latest), unzip it, and drag `FretNote.app` into Applications.
+Download `FretNote-v0.3.1-macOS-arm64.zip` from [Releases](https://github.com/lele94218/FretNote/releases/latest), unzip it, and drag `FretNote.app` into Applications.
 
 - **Release requirements:** Apple Silicon Mac (M series), macOS 13 or later.
 - **Intel Macs:** no prebuilt release yet. Building from source may work but has not been verified.
@@ -51,7 +51,7 @@ Download `FretNote-v0.3.0-macOS-arm64.zip` from [Releases](https://github.com/le
 
 ## Fretboard learning
 
-Click **指板学习** in the sidebar, or press `⇧⌘L`. The diagram appears immediately; no audio input or answer is required. Choose chord or arpeggio, 135 or 137, a quality, and a root. Chord views offer adjacent string sets (135 also offers three degree orders); arpeggios offer a root string and three string-distribution paths. Use previous/next position to browse octaves. All notes remain within frets 0–21 and the diagram fits the complete shape, including spans wider than four frets.
+Select **和弦练习** (chords) or **琶音练习** (arpeggios) alongside the existing exercises in the sidebar. The diagram appears immediately; no audio input or answer is required. Choose 135 or 137, a quality, and a root. Chord views offer adjacent string sets (135 also offers three degree orders); arpeggios offer a root string and three string-distribution paths. Use previous/next position to browse octaves. All notes remain within frets 0–21 and the diagram fits the complete shape, including spans wider than four frets.
 
 135 includes major, minor, augmented, and diminished triads. 137 includes major seventh, dominant seventh, and minor seventh shells only. Switching to learning stops audio capture; returning to practice does not restart it. **This release adds visual learning, not chord audio recognition or graded arpeggio practice.**
 

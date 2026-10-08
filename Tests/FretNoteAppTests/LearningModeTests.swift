@@ -59,7 +59,10 @@ final class LearningModeTests: XCTestCase {
         for (name, shell, arpeggio, theme) in [("chord", false, false, AppTheme.light), ("shell", true, false, .dark), ("arpeggio", false, true, .light)] {
             let store = LearningStore()
             store.shell = shell; store.arpeggio = arpeggio
-            let view = LearningView(store: store, leave: {})
+            let practice = PracticeStore(file: folder.appendingPathComponent("progress.json"))
+            let audio = AudioInput()
+            practice.setLearning(true, audio: audio)
+            let view = LearningView(store: store, practice: practice, audio: audio)
                 .environmentObject(appearance).environment(\.interfaceScale, 1.75)
                 .preferredColorScheme(theme.colorScheme).frame(width: 1040, height: 740)
             let host = NSHostingView(rootView: view)
