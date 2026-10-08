@@ -56,6 +56,7 @@ final class LearningModeTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let appearance = AppearancePreferences(defaults: defaults)
+        for (suffix, width, height, fontScale) in [("", 1160.0, 820.0, 1.25), ("-large-text", 1040.0, 740.0, 1.75)] {
         for (name, shell, arpeggio, theme) in [("chord", false, false, AppTheme.light), ("shell", true, false, .dark), ("arpeggio", false, true, .light)] {
             let store = LearningStore()
             store.shell = shell; store.arpeggio = arpeggio
@@ -63,19 +64,20 @@ final class LearningModeTests: XCTestCase {
             let audio = AudioInput()
             practice.setLearning(true, audio: audio)
             let view = LearningView(store: store, practice: practice, audio: audio)
-                .environmentObject(appearance).environment(\.interfaceScale, 1.75)
-                .preferredColorScheme(theme.colorScheme).frame(width: 1040, height: 740)
+                .environmentObject(appearance).environment(\.interfaceScale, fontScale)
+                .preferredColorScheme(theme.colorScheme).frame(width: width, height: height)
             let host = NSHostingView(rootView: view)
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1040, height: 740), styleMask: [.borderless], backing: .buffered, defer: false)
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: width, height: height), styleMask: [.borderless], backing: .buffered, defer: false)
             window.appearance = NSAppearance(named: theme == .dark ? .darkAqua : .aqua)
             window.contentView = host; window.orderFront(nil)
             try await Task.sleep(nanoseconds: 300_000_000)
             host.layoutSubtreeIfNeeded()
-            XCTAssertLessThanOrEqual(host.fittingSize.height, 740)
+            XCTAssertLessThanOrEqual(host.fittingSize.height, height)
             let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
             host.cacheDisplay(in: host.bounds, to: bitmap)
-            try XCTUnwrap(bitmap.representation(using: .png, properties: [:])).write(to: folder.appendingPathComponent("\(name).png"))
+            try XCTUnwrap(bitmap.representation(using: .png, properties: [:])).write(to: folder.appendingPathComponent("\(name)\(suffix).png"))
             window.orderOut(nil)
+        }
         }
     }
 }

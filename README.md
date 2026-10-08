@@ -13,7 +13,7 @@ Connect a guitar through an audio interface, read the note, and play it. FretNot
 
 ## Screenshots
 
-Actual app views rendered with demo data; no personal learning records are shown.
+Actual app views rendered with demo data; no personal learning records are shown. Exercise screenshots use a consistent 1160 × 820 pt window and 125% text size. All exercises share the same fretboard proportions and drawing height limit.
 
 ### Chord practice · 135
 

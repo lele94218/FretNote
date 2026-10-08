@@ -218,6 +218,7 @@ struct FretboardView: View {
                     }
                 }
             }
+            .frame(maxHeight: 160)
             .accessibilityLabel("吉他指板，一弦在上，六弦在下；练习范围第 \(lower) 到 \(upper) 品")
             .accessibilityValue(!learningTones.isEmpty ? learningTones.map { "\($0.name)，\($0.degree)，第 \($0.note.string) 弦第 \($0.note.fret) 品" }.joined(separator: "；") : highlightedNote.map { "参考位置：第 \($0.string) 弦，第 \($0.fret) 品" } ?? "未显示答案位置")
         }
