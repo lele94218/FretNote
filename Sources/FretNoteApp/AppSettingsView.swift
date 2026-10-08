@@ -65,7 +65,7 @@ struct AppSettingsView: View {
                 Spacer()
                 Button(audio.starting ? "正在启动…" : (audio.running ? "停止监听" : "开始监听")) {
                     if audio.running { audio.stop() } else { Task { await audio.start() } }
-                }.disabled(audio.starting || audio.devices.isEmpty)
+                }.disabled(audio.learningMode || audio.starting || audio.devices.isEmpty)
             }
             HStack(spacing: 14) {
                 GeometryReader { geometry in

@@ -80,6 +80,7 @@ final class AudioAnalyzer {
 
 @MainActor
 final class AudioInput: ObservableObject {
+    @Published var learningMode = false { didSet { if learningMode { stop() } } }
     @Published var devices = InputDevice.all()
     @Published var selectedDevice = InputDevice.defaultID()
     @Published var channel = 0
@@ -102,11 +103,13 @@ final class AudioInput: ObservableObject {
         channel = min(channel, max(0, channelCount - 1))
     }
     func start() async {
-        guard !running, !starting else { return }
+        guard !learningMode, !running, !starting else { return }
         starting = true
         defer { starting = false }
         error = nil
+        let requestToken = generation
         let allowed = await AVCaptureDevice.requestAccess(for: .audio)
+        guard !learningMode, generation == requestToken else { return }
         guard allowed else {
             error = "请在系统设置 → 隐私与安全性 → 麦克风中允许 FretNote，然后重试。"
             return

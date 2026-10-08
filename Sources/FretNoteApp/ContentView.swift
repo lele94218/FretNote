@@ -12,9 +12,17 @@ struct ContentView: View {
     private var rule: Color { palette.rule }
     @ObservedObject var audio: AudioInput
     @ObservedObject var practice: PracticeStore
+    @StateObject private var learningStore = LearningStore()
     @State private var showProgress = false
     @State private var showError = false
     var body: some View {
+        Group {
+            if practice.learning {
+                LearningView(store: learningStore) { practice.setLearning(false, audio: audio) }
+            } else { practiceBody }
+        }
+    }
+    private var practiceBody: some View {
         HSplitView {
             if appearance.sidebarVisible {
                 sidebar
@@ -71,6 +79,10 @@ struct ContentView: View {
     }
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 20) {
+            Button { practice.setLearning(true, audio: audio) } label: {
+                Label("指板学习", systemImage: "book")
+                    .font(.system(size: 14 * scale, weight: .medium))
+            }.buttonStyle(.plain).padding(.horizontal, 8)
             VStack(alignment: .leading, spacing: 8) {
                 eyebrow("练习")
                 ForEach(PracticeMode.allCases) { mode in

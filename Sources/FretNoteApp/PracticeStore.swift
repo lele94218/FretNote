@@ -4,6 +4,15 @@ import FretNoteCore
 @MainActor
 final class PracticeStore: ObservableObject {
     static let maximumFret = 21
+    @Published private(set) var learning = false
+    func setLearning(_ enabled: Bool, audio: AudioInput) {
+        if enabled {
+            if active { end() }
+            showSummary = false
+        }
+        audio.learningMode = enabled
+        learning = enabled
+    }
     @Published var mode: PracticeMode = .names
     @Published var string = 1
     @Published private(set) var selectedStrings: Set<Int> = [1]
@@ -95,6 +104,7 @@ final class PracticeStore: ObservableObject {
         }
     }
     func start() {
+        guard !learning else { return }
         if active { end() }
         session = LearningSession(mode: mode.rawValue, scope: (mode == .names ? "\(selectedStringLabel) · 0–21 品" : "六根弦 · \(lowerFret)–\(upperFret) 品") + (naturalsOnly ? " · 自然音" : " · 全部音"))
         nextTask?.cancel()

@@ -106,6 +106,7 @@ struct FretboardView: View {
     let upper: Int
     var highlightedNote: GuitarNote? = nil
     var emphasizedString: Int? = nil
+    var learningTones: [LearningTone] = []
     @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.interfaceScale) private var scale
@@ -200,6 +201,14 @@ struct FretboardView: View {
                     let selectionRight = fretLeft(upper) + fretWidth(upper)
                     let range = Path(roundedRect: CGRect(x: selectionLeft, y: 116, width: selectionRight - selectionLeft, height: 2), cornerRadius: 1)
                     context.fill(range, with: .color(ink))
+                    for tone in learningTones where (firstFret...lastFret).contains(tone.note.fret) {
+                        let x = fretLeft(tone.note.fret) + fretWidth(tone.note.fret) / 2
+                        let y = stringY(tone.note.string)
+                        let marker = Path(roundedRect: CGRect(x: x - 10, y: y - 6.5, width: 20, height: 13), cornerRadius: 5)
+                        context.fill(marker, with: .color(.white))
+                        context.stroke(marker, with: .color(.black), lineWidth: tone.degree == "1" ? 1.5 : 0.7)
+                        context.draw(Text(tone.degree).font(.system(size: 9, weight: .bold)).foregroundColor(.black), at: CGPoint(x: x, y: y))
+                    }
                     if let note = highlightedNote, (firstFret...lastFret).contains(note.fret), (1...6).contains(note.string) {
                         let x = fretLeft(note.fret) + fretWidth(note.fret) / 2
                         let y = stringY(note.string)
@@ -210,7 +219,7 @@ struct FretboardView: View {
                 }
             }
             .accessibilityLabel("吉他指板，一弦在上，六弦在下；练习范围第 \(lower) 到 \(upper) 品")
-            .accessibilityValue(highlightedNote.map { "参考位置：第 \($0.string) 弦，第 \($0.fret) 品" } ?? "未显示答案位置")
+            .accessibilityValue(!learningTones.isEmpty ? learningTones.map { "\($0.name)，\($0.degree)，第 \($0.note.string) 弦第 \($0.note.fret) 品" }.joined(separator: "；") : highlightedNote.map { "参考位置：第 \($0.string) 弦，第 \($0.fret) 品" } ?? "未显示答案位置")
         }
     }
     private var rangeLabel: some View {

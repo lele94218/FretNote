@@ -29,6 +29,8 @@ Actual app views rendered with demo data; no personal learning records are shown
 
 ## Features
 
+- **Fretboard learning:** browse 135 triads and 137 shells without connecting a guitar or granting microphone access. View chord shapes or arpeggio paths, degree labels, note names, and positions. Supports all 12 roots, optional open strings, and browsing available octaves. Learning does not change practice scores.
+
 - **Note-name practice:** choose one or more strings. Each question specifies a string; find the named note anywhere from the open string to fret 21. Any playable octave of that note on the requested string is accepted.
 - **Sight-reading:** read a note on the staff and find it within a selected position, across all six strings. The fretboard stays visible; hints reveal a reference position.
 - **Short melodies:** play 3–5 notes within a fixed position, checked one note at a time for pitch and order.
@@ -41,11 +43,17 @@ The app interface is currently in **Simplified Chinese**. Documentation is avail
 
 ## Download and install
 
-Download `FretNote-v0.2.0-macOS-arm64.zip` from [Releases](https://github.com/lele94218/FretNote/releases/latest), unzip it, and drag `FretNote.app` into Applications.
+Download `FretNote-v0.3.0-macOS-arm64.zip` from [Releases](https://github.com/lele94218/FretNote/releases/latest), unzip it, and drag `FretNote.app` into Applications.
 
 - **Release requirements:** Apple Silicon Mac (M series), macOS 13 or later.
 - **Intel Macs:** no prebuilt release yet. Building from source may work but has not been verified.
 - **Signing:** builds are ad-hoc signed, without Apple Developer ID signing or notarization. macOS may block the first launch. Follow [Apple's guidance](https://support.apple.com/102445) only after verifying the download source, or build from source.
+
+## Fretboard learning
+
+Click **指板学习** in the sidebar, or press `⇧⌘L`. The diagram appears immediately; no audio input or answer is required. Choose chord or arpeggio, 135 or 137, a quality, and a root. Chord views offer adjacent string sets (135 also offers three degree orders); arpeggios offer a root string and three string-distribution paths. Use previous/next position to browse octaves. All notes remain within frets 0–21 and the diagram fits the complete shape, including spans wider than four frets.
+
+135 includes major, minor, augmented, and diminished triads. 137 includes major seventh, dominant seventh, and minor seventh shells only. Switching to learning stops audio capture; returning to practice does not restart it. **This release adds visual learning, not chord audio recognition or graded arpeggio practice.**
 
 ## Getting started
 
