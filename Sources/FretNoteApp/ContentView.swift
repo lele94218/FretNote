@@ -13,13 +13,27 @@ struct ContentView: View {
     @ObservedObject var audio: AudioInput
     @ObservedObject var practice: PracticeStore
     @StateObject private var learningStore = LearningStore()
+    @StateObject private var shapePractice = ShapePracticeStore()
     @State private var showProgress = false
     @State private var showError = false
     var body: some View {
         Group {
             if practice.learning {
-                LearningView(store: learningStore, practice: practice, audio: audio)
+                LearningView(store: learningStore, practice: practice, audio: audio, drill: shapePractice)
             } else { practiceBody }
+        }
+        .onAppear {
+            audio.onNote = { midi in
+                if practice.learning { shapePractice.receive(note: midi, records: practice) }
+                else { practice.receive(midi) }
+            }
+            audio.onChord = { midis in
+                if practice.learning { shapePractice.receive(chord: midis, records: practice) }
+            }
+            audio.onLevel = { rms in shapePractice.observeLevel(rms, gate: pow(10, audio.gateDB / 20)) }
+        }
+        .onChange(of: audio.running) { running in
+            if !running && shapePractice.active { shapePractice.end(records: practice) }
         }
     }
     private var practiceBody: some View {
@@ -79,7 +93,7 @@ struct ContentView: View {
     }
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 12) {
-            ExerciseNavigation(practice: practice, audio: audio, learning: learningStore)
+            ExerciseNavigation(practice: practice, audio: audio, learning: learningStore, drill: shapePractice)
             VStack(alignment: .leading, spacing: 12) {
                 eyebrow("练习范围")
                 if practice.mode == .names {

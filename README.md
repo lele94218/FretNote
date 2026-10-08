@@ -23,6 +23,10 @@ Actual app views rendered with demo data; no personal learning records are shown
 
 ![Arpeggio learning with degrees, note names and string positions](docs/screenshots/arpeggio-learning-light.jpg)
 
+### Arpeggio practice · Audio input
+
+![Ordered arpeggio practice with hidden reference positions](docs/screenshots/arpeggio-practice-light.jpg)
+
 ### Chord practice · 137 · Dark
 
 ![Root–third–seventh chord learning in dark mode](docs/screenshots/shell-learning-dark.jpg)
@@ -41,7 +45,7 @@ Actual app views rendered with demo data; no personal learning records are shown
 
 ## Features
 
-- **Fretboard learning:** browse 135 triads and 137 shells without connecting a guitar or granting microphone access. View chord shapes or arpeggio paths, degree labels, note names, and positions. Supports all 12 roots, optional open strings, and browsing available octaves. Learning does not change practice scores.
+- **Fretboard learning:** choose a root and quality to view a gallery of 135 triads or 137 shells, without connecting a guitar. The current source build also provides ordered arpeggio practice and experimental polyphonic chord practice.
 
 - **Note-name practice:** choose one or more strings. Each question specifies a string; find the named note anywhere from the open string to fret 21. Any playable octave of that note on the requested string is accepted.
 - **Sight-reading:** read a note on the staff and find it within a selected position, across all six strings. The fretboard stays visible; hints reveal a reference position.
@@ -61,11 +65,18 @@ Download `FretNote-v0.3.1-macOS-arm64.zip` from [Releases](https://github.com/le
 - **Intel Macs:** no prebuilt release yet. Building from source may work but has not been verified.
 - **Signing:** builds are ad-hoc signed, without Apple Developer ID signing or notarization. macOS may block the first launch. Follow [Apple's guidance](https://support.apple.com/102445) only after verifying the download source, or build from source.
 
-## Fretboard learning
+## Chords and arpeggios: learn → practice
 
-Select **和弦练习** (chords) or **琶音练习** (arpeggios) alongside the existing exercises in the sidebar. The diagram appears immediately; no audio input or answer is required. Choose 135 or 137, a quality, and a root. Chord views offer adjacent string sets (135 also offers three degree orders); arpeggios offer a root string and three string-distribution paths. Use previous/next position to browse octaves. All notes remain within frets 0–21 and the diagram fits the complete shape, including spans wider than four frets.
+This section describes the current source/local development build. The v0.3.1 download still has the earlier single-shape browser.
 
-135 includes major, minor, augmented, and diminished triads. 137 includes major seventh, dominant seventh, and minor seventh shells only. Switching to learning stops audio capture; returning to practice does not restart it. **This release adds visual learning, not chord audio recognition or graded arpeggio practice.**
+Choose **和弦练习** (chords) or **琶音练习** (arpeggios), then only a **root and quality**. Learning automatically presents string sets, degree orders, root strings, arpeggio paths and positions as a paginated gallery. There are no separate string-set, inversion or path selectors. Supported qualities are major, minor, augmented and diminished triads (135), plus major, dominant and minor seventh shells (137). Shapes cover frets 1–21 with their complete span; open strings are currently excluded.
+
+Click **开始练习**, or switch **学习 / 练习** at the top. The selected root and quality remain. The app prepares up to 10 distinct sounding voicings, hides the reference positions, and provides hints, skip, next and end controls. The question states degrees, root string, sounding octaves and position range. Mute before each new question. Returning to learning stops capture.
+
+- **Arpeggios:** checks three sounding pitches and octaves in order. A mistake stays on the current note; completing all three counts as one question.
+- **Chords:** a separate polyphonic analysis checks coexisting pitches and octaves. A short strum followed by sustained notes is accepted; separated notes are not accumulated. This is **experimental**: synthetic tests pass, but real guitar/interface accuracy and latency have not been validated. Use a clean signal and mute unused strings. Weak fundamentals, distortion and extra octave-doubled notes remain limitations.
+
+Browsing does not affect scores. Completed three-note questions are saved separately by mode and 135/137 family, with first-correct, hint and skip counts. Existing single-note progress is preserved. Incomplete questions do not count. Audio cannot verify physical fingering.
 
 ## Getting started
 
@@ -76,6 +87,8 @@ Select **和弦练习** (chords) or **琶音练习** (arpeggios) alongside the e
 5. Complete a 20-note session, or finish early. Mistakes, hints, and skips increase the priority of those notes in future practice.
 
 The default position is frets 1–4. Selecting fret 5 moves it to frets 5–8. Custom ranges can include open strings. Staff notation follows guitar convention: **written one octave above sounding pitch**. The small 8 beneath the treble clef indicates this transposition.
+
+Single-note exercise shortcuts:
 
 | Shortcut | Action |
 | --- | --- |
@@ -88,7 +101,7 @@ The default position is frets 1–4. Selecting fret 5 moves it to frets 5–8. C
 
 ## Detection limits
 
-- **Single notes only.** Chords, rhythm, bends, and slides are not evaluated.
+- Existing note-name, staff and melody exercises use single-note detection. The current source build adds experimental chord detection as described above. Rhythm, bends and slides are not evaluated.
 - Staff and melody modes require the correct sounding pitch and octave. Note-name mode accepts matching pitch classes within the requested string's playable range.
 - Audio cannot reliably determine the physical string or fret when multiple positions produce the same pitch. Follow the displayed position yourself.
 - Detection requires a stable pitch, allowing approximately ±40 cents. Unclear input and noise do not count as wrong answers.

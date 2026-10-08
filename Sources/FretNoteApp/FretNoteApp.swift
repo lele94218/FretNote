@@ -12,7 +12,6 @@ struct FretNoteApp: App {
                 .environment(\.interfaceScale, appearance.fontScale)
                 .preferredColorScheme(appearance.theme.colorScheme)
                 .frame(minWidth: 1040, minHeight: 740)
-                .onAppear { audio.onNote = { [weak practice] midi in practice?.receive(midi) } }
                 .onChange(of: audio.running) { running in
                     if !running && practice.active { practice.end() }
                 }

@@ -10,6 +10,9 @@ struct LearningSession: Codable, Identifiable {
     var answered = 0
     var firstCorrect = 0
     var totalSeconds = 0.0
+    var questionCount: Int?
+    var shapeResults: [ShapeResult]?
+    var unit: String { questionCount == nil ? "音" : "题" }
     var hints = 0
     var skipped = 0
     var accuracy: String { answered == 0 ? "—" : "\(Int(Double(firstCorrect) / Double(answered) * 100))%" }
@@ -20,4 +23,16 @@ struct LearningArchive: Codable {
     var version = 1
     var progress: [String: NoteProgress]
     var sessions: [LearningSession]
+}
+
+struct ShapeResult: Codable {
+    let midis: [Int]
+    let strings: [Int]
+    let frets: [Int]
+    let degrees: [String]
+    let path: String
+    let firstCorrect: Bool
+    let hinted: Bool
+    let skipped: Bool
+    let seconds: Double
 }

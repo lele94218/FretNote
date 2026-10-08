@@ -48,7 +48,11 @@ final class AudioAnalyzer {
     var noteGate = NoteGate()
     var clock = 0.0
     let gate: Double
-    init(gate: Double) { self.gate = gate }
+    let chordMode: Bool
+    private let chordDetector = ChordDetector()
+    private var chordGate = ChordGate()
+    var onChord: ((ChordReading?, [Int]?) -> Void)?
+    init(gate: Double, chordMode: Bool = false) { self.gate = gate; self.chordMode = chordMode }
     func consume(_ samples: [Float], rate: Double, report: (PitchReading?, Double, Int?) -> Void) {
         // Average before decimation to suppress high-frequency content.
         let factor = max(1, Int(rate / 12_000))
@@ -65,12 +69,22 @@ final class AudioAnalyzer {
         }
         decimationRemainder = Array(source[consumed...])
         pending.append(contentsOf: reduced)
-        let window = 1536, hop = 384
+        let window = chordMode ? ChordDetector.window : 1536, hop = chordMode ? 1024 : 384
         while pending.count >= window {
             let frame = Array(pending.prefix(window))
-            let rms = sqrt(frame.reduce(0.0) { $0 + Double($1 * $1) } / Double(window))
-            let pitch = PitchDetector.detect(frame, sampleRate: analysisRate, gate: gate)
+            // Release gating uses recent audio, not the FFT's long trailing window.
+            let meter = chordMode ? Array(frame.suffix(hop)) : frame
+            let rms = sqrt(meter.reduce(0.0) { $0 + Double($1 * $1) } / Double(meter.count))
             clock += Double(hop) / analysisRate
+            if chordMode {
+                let chord = chordDetector.detect(frame, sampleRate: analysisRate, gate: gate)
+                let event = chordGate.process(chord, rms: rms, now: clock, gate: gate)
+                report(nil, rms, nil)
+                onChord?(chord, event)
+                pending.removeFirst(hop)
+                continue
+            }
+            let pitch = PitchDetector.detect(frame, sampleRate: analysisRate, gate: gate)
             let event = noteGate.process(pitch, rms: rms, now: clock, gate: gate)
             report(pitch, rms, event)
             pending.removeFirst(hop)
@@ -91,6 +105,10 @@ final class AudioInput: ObservableObject {
     @Published var reading: PitchReading?
     @Published var level = 0.0
     var onNote: ((Int) -> Void)?
+    var onChord: (([Int]) -> Void)?
+    var onLevel: ((Double) -> Void)?
+    @Published var chordReading: ChordReading?
+    var chordMode = false { didSet { if chordMode != oldValue { stop() } } }
     private var engine: AVAudioEngine?
     private let queue = DispatchQueue(label: "FretNote.audio-analysis", qos: .userInitiated)
     private var generation = UUID()
@@ -123,9 +141,16 @@ final class AudioInput: ObservableObject {
         let format = input.outputFormat(forBus: 0)
         guard format.sampleRate > 0, format.channelCount > channel else { error = "输入通道不可用，请重新选择。"; return }
         let selectedChannel = channel
-        let analyzer = AudioAnalyzer(gate: pow(10, gateDB / 20))
+        let analyzer = AudioAnalyzer(gate: pow(10, gateDB / 20), chordMode: chordMode)
         let token = UUID()
         generation = token
+        analyzer.onChord = { [weak self] reading, event in
+            Task { @MainActor [weak self] in
+                guard let self, self.generation == token, self.running else { return }
+                self.chordReading = reading
+                if let event { self.onChord?(event) }
+            }
+        }
         let analysisQueue = queue
         input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
             guard let data = buffer.floatChannelData, buffer.frameLength > 0 else { return }
@@ -143,6 +168,7 @@ final class AudioInput: ObservableObject {
                         guard let self, self.generation == token, self.running else { return }
                         self.reading = pitch
                         self.level = rms
+                        self.onLevel?(rms)
                         if let event { self.onNote?(event) }
                     }
                 }
@@ -173,6 +199,6 @@ final class AudioInput: ObservableObject {
         engine?.stop()
         engine?.inputNode.removeTap(onBus: 0)
         engine = nil
-        running = false; reading = nil; level = 0
+        running = false; reading = nil; chordReading = nil; level = 0
     }
 }

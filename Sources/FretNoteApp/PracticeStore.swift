@@ -201,6 +201,11 @@ final class PracticeStore: ObservableObject {
             }
         }
     }
+    func recordShapeSession(_ current: LearningSession) {
+        guard current.questionCount != nil, current.answered > 0 else { return }
+        updateSession(current)
+        save()
+    }
     private func updateSession(_ current: LearningSession) {
         if let index = sessions.firstIndex(where: { $0.id == current.id }) {
             sessions[index] = current

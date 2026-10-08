@@ -20,7 +20,7 @@ final class LearningModeTests: XCTestCase {
         XCTAssertFalse(practice.showSummary)
         let saved = try Data(contentsOf: file)
         let learning = LearningStore()
-        learning.move(1); learning.shell = true; learning.arpeggio = true
+        learning.position = 1; learning.quality = .major7; learning.arpeggio = true
         practice.start(); practice.skip(); practice.receive(69)
         await audio.start() // Must return before requesting microphone access.
         XCTAssertFalse(audio.starting)
@@ -33,18 +33,17 @@ final class LearningModeTests: XCTestCase {
         XCTAssertFalse(audio.learningMode)
     }
     @MainActor
-    func testSelectionChangesAndEmptyCombination() {
+    func testCatalogCoversGroupsAndPathsWithoutSelectors() {
         let store = LearningStore()
-        XCTAssertEqual(store.selected?.tones.map(\.note.fret), [5, 4, 2])
-        store.move(100)
-        XCTAssertEqual(store.position, store.shapes.count - 1)
-        store.shell = true
-        XCTAssertEqual(store.quality, .major7)
+        XCTAssertGreaterThan(store.catalog.count, 12)
+        XCTAssertEqual(Set(store.catalog.map(\.label)), ["654 弦", "543 弦", "432 弦", "321 弦"])
+        store.position = 2
+        store.quality = .major7
         XCTAssertEqual(store.position, 0)
-        store.arpeggio = true; store.rootString = 2; store.path = 2
-        XCTAssertNil(store.selected)
-        store.path = 1
-        XCTAssertNotNil(store.selected)
+        XCTAssertTrue(store.catalog.allSatisfy { $0.shape.tones.map(\.degree) == ["1", "3", "7"] })
+        store.arpeggio = true
+        XCTAssertEqual(Set(store.catalog.map(\.label)), ["前两音同弦", "后两音同弦", "每弦一个音"])
+
     }
     @MainActor
     func testRenderLearning() async throws {
@@ -58,12 +57,17 @@ final class LearningModeTests: XCTestCase {
         let appearance = AppearancePreferences(defaults: defaults)
         for (suffix, width, height, fontScale) in [("", 1160.0, 820.0, 1.25), ("-large-text", 1040.0, 740.0, 1.75)] {
         for (name, shell, arpeggio, theme) in [("chord", false, false, AppTheme.light), ("shell", true, false, .dark), ("arpeggio", false, true, .light)] {
+            for exercise in [false, true] {
             let store = LearningStore()
-            store.shell = shell; store.arpeggio = arpeggio
+            store.quality = shell ? .major7 : .major; store.arpeggio = arpeggio
             let practice = PracticeStore(file: folder.appendingPathComponent("progress.json"))
             let audio = AudioInput()
             practice.setLearning(true, audio: audio)
-            let view = LearningView(store: store, practice: practice, audio: audio)
+            let drill = ShapePracticeStore()
+            if exercise {
+                drill.start(catalog: Array(store.catalog.prefix(1)), arpeggio: arpeggio, name: "A", shell: shell)
+            }
+            let view = LearningView(store: store, practice: practice, audio: audio, drill: drill)
                 .environmentObject(appearance).environment(\.interfaceScale, fontScale)
                 .preferredColorScheme(theme.colorScheme).frame(width: width, height: height)
             let host = NSHostingView(rootView: view)
@@ -75,8 +79,9 @@ final class LearningModeTests: XCTestCase {
             XCTAssertLessThanOrEqual(host.fittingSize.height, height)
             let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
             host.cacheDisplay(in: host.bounds, to: bitmap)
-            try XCTUnwrap(bitmap.representation(using: .png, properties: [:])).write(to: folder.appendingPathComponent("\(name)\(suffix).png"))
+            try XCTUnwrap(bitmap.representation(using: .png, properties: [:])).write(to: folder.appendingPathComponent("\(name)\(exercise ? "-exercise" : "")\(suffix).png"))
             window.orderOut(nil)
+            }
         }
         }
     }

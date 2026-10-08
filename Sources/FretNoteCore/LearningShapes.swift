@@ -106,3 +106,30 @@ public enum LearningShapes {
         return results.sorted { $0.lower < $1.lower }
     }
 }
+
+public struct LearningExample: Identifiable {
+    public let shape: LearningShape
+    public let label: String
+    public var id: String { label + ":" + shape.id }
+}
+
+extension LearningShapes {
+    /// Enumerate the answers instead of asking the learner to configure each one.
+    public static func catalog(root: Int, quality: LearningQuality, arpeggio: Bool) -> [LearningExample] {
+        var examples: [LearningExample] = []
+        for string in (arpeggio ? 2 : 3)...6 {
+            for variant in 0..<(arpeggio || !quality.isShell ? 3 : 1) {
+                let label = arpeggio ? ["前两音同弦", "后两音同弦", "每弦一个音"][variant]
+                    : "\(string)\(string - 1)\(string - 2) 弦"
+                for shape in make(root: root, quality: quality, arpeggio: arpeggio, bassString: string,
+                                  inversion: arpeggio ? 0 : variant, path: arpeggio ? variant : 0) {
+                    examples.append(LearningExample(shape: shape, label: label))
+                }
+            }
+        }
+        return examples.sorted {
+            if $0.shape.lower != $1.shape.lower { return $0.shape.lower < $1.shape.lower }
+            return $0.id < $1.id
+        }
+    }
+}

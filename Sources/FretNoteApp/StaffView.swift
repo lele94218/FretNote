@@ -107,6 +107,7 @@ struct FretboardView: View {
     var highlightedNote: GuitarNote? = nil
     var emphasizedString: Int? = nil
     var learningTones: [LearningTone] = []
+    var showsCaption = true
     @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.interfaceScale) private var scale
@@ -125,6 +126,7 @@ struct FretboardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            if showsCaption {
             ViewThatFits(in: .horizontal) {
                 HStack {
                     rangeLabel
@@ -134,6 +136,7 @@ struct FretboardView: View {
                 VStack(alignment: .leading, spacing: 5) { rangeLabel; hintLabel }
             }
             .font(.system(size: 12 * scale)).foregroundStyle(palette.muted)
+            }
             FixedDiagram(size: CGSize(width: (right + 14) * scale, height: 144 * scale)) {
                 Canvas { context, _ in
                     context.scaleBy(x: scale, y: scale)

@@ -27,6 +27,8 @@ struct LearningHistoryView: View {
                 metric(attempts == 0 ? "—" : String(format: "%.1f 秒", seconds / Double(attempts)), "平均找音时间")
                 Spacer(minLength: 0)
             }
+            Text("三音练习 \(practice.sessions.filter { $0.questionCount != nil }.reduce(0) { $0 + $1.answered }) 题 · 单独按完整题目统计")
+                .font(.system(size: 11 * scale)).foregroundStyle(palette.muted)
             Divider()
             Picker("记录内容", selection: $tab) {
                 Text("练习历史").tag(0)
@@ -89,7 +91,7 @@ struct LearningHistoryView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(session.mode).fontWeight(.medium)
-                Text(session.answered >= 20 ? "已完成" : (session.endedAt == nil ? "已保存" : "提前结束"))
+                Text(session.answered >= (session.questionCount ?? 20) ? "已完成" : (session.endedAt == nil ? "已保存" : "提前结束"))
                     .font(.system(size: 11 * scale)).foregroundStyle(palette.muted)
                 Spacer()
                 Text(session.startedAt.formatted(.dateTime.month().day().hour().minute()))
@@ -98,7 +100,7 @@ struct LearningHistoryView: View {
             }
             Text(session.scope).font(.system(size: 11 * scale)).foregroundStyle(palette.muted)
             HStack {
-                Text("\(session.answered) 音 · 首次正确 \(session.accuracy) · 平均 \(session.averageTime)")
+                Text("\(session.answered) \(session.unit) · 首次正确 \(session.accuracy) · 平均 \(session.averageTime)")
                 Spacer(minLength: 0)
                 Text("提示 \(session.hints) · 跳过 \(session.skipped)")
             }.font(.system(size: 11 * scale)).monospacedDigit()
