@@ -12,6 +12,18 @@
 
 以下为实际 App 界面，使用演示数据，不包含个人学习记录。
 
+### 和弦练习 · 135
+
+![和弦学习与统一练习侧栏](docs/screenshots/chord-learning-light.jpg)
+
+### 琶音练习
+
+![琶音指板、音级、音名与弦品位置](docs/screenshots/arpeggio-learning-light.jpg)
+
+### 和弦练习 · 137 · 深色
+
+![137 和弦学习深色界面](docs/screenshots/shell-learning-dark.jpg)
+
 ### 五线谱找音 · 浅色
 
 ![五线谱找音与六弦指板](docs/screenshots/sight-reading-light.jpg)

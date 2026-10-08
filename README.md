@@ -15,6 +15,18 @@ Connect a guitar through an audio interface, read the note, and play it. FretNot
 
 Actual app views rendered with demo data; no personal learning records are shown.
 
+### Chord practice · 135
+
+![Chord learning with shared exercise navigation](docs/screenshots/chord-learning-light.jpg)
+
+### Arpeggio practice
+
+![Arpeggio learning with degrees, note names and string positions](docs/screenshots/arpeggio-learning-light.jpg)
+
+### Chord practice · 137 · Dark
+
+![Root–third–seventh chord learning in dark mode](docs/screenshots/shell-learning-dark.jpg)
+
 ### Sight-reading · Light
 
 ![Sight-reading with staff notation and a six-string fretboard](docs/screenshots/sight-reading-light.jpg)
