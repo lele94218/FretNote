@@ -49,3 +49,23 @@ struct AppPalette {
     var rule: Color { Color(white: scheme == .dark ? (contrast == .increased ? 0.65 : 0.27) : (contrast == .increased ? 0.4 : 0.88)) }
     var selection: Color { Color(white: scheme == .dark ? 0.18 : 0.94) }
 }
+
+/// Flat monochrome controls; SwiftUI Button retains keyboard and accessibility behavior.
+struct EditorialButtonStyle: ButtonStyle {
+    var prominent = false
+    @Environment(\.isEnabled) private var enabled
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.colorSchemeContrast) private var contrast
+    @Environment(\.interfaceScale) private var scale
+    func makeBody(configuration: Configuration) -> some View {
+        let palette = AppPalette(scheme: scheme, contrast: contrast)
+        return configuration.label
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .frame(minHeight: 28)
+            .foregroundStyle(prominent ? palette.background : palette.ink)
+            .background(prominent ? palette.ink : configuration.isPressed ? palette.selection : palette.background)
+            .overlay(Rectangle().strokeBorder(prominent ? palette.ink : palette.rule, lineWidth: 1))
+            .opacity(enabled ? (configuration.isPressed ? 0.7 : 1) : 0.4)
+            .contentShape(Rectangle())
+    }
+}

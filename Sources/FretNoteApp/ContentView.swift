@@ -65,7 +65,7 @@ struct ContentView: View {
                         Button { showError = true } label: { Label("查看问题", systemImage: "exclamationmark.circle") }
                     }
                     Button("学习记录") { showProgress = true }
-                }.font(.system(size: 12 * scale)).buttonStyle(.bordered)
+                }.font(.system(size: 12 * scale)).buttonStyle(EditorialButtonStyle())
                     .padding(.horizontal, 20).padding(.vertical, 12)
             }.frame(minWidth: 600)
         }
@@ -144,10 +144,10 @@ struct ContentView: View {
             Button { appearance.sidebarVisible.toggle() } label: { Image(systemName: "sidebar.left") }
                 .accessibilityLabel(appearance.sidebarVisible ? "隐藏侧栏" : "显示侧栏")
                 .help("显示或隐藏侧栏（⌃⌘S）")
-            Text(practice.mode.rawValue).font(.system(size: 20 * scale, weight: .medium))
+            Text(practice.mode.rawValue).font(.system(size: 20 * scale, weight: .regular))
             Spacer()
             OpenSettingsButton()
-        }.buttonStyle(.bordered)
+        }.buttonStyle(EditorialButtonStyle())
     }
     private var actionBar: some View {
         ViewThatFits(in: .horizontal) {
@@ -156,7 +156,7 @@ struct ContentView: View {
                 listeningControls
                 HStack { Spacer(); practiceControls }
             }
-        }.font(.system(size: 12 * scale)).controlSize(.large).buttonStyle(.bordered)
+        }.font(.system(size: 12 * scale)).controlSize(.large).buttonStyle(EditorialButtonStyle())
     }
     private var listeningControls: some View {
         HStack(spacing: 10) {
@@ -174,7 +174,7 @@ struct ContentView: View {
                 Button("结束练习") { practice.end() }
             } else {
                 Button("开始练习") { practice.start() }
-                    .buttonStyle(.borderedProminent).disabled(!audio.running)
+                    .buttonStyle(EditorialButtonStyle(prominent: true)).disabled(!audio.running)
                     .help(audio.running ? "开始一组 20 个音的练习（⌘Return）" : "先点击左侧“开启输入”")
             }
         }.fixedSize()
@@ -189,7 +189,7 @@ struct ContentView: View {
             GeometryReader { space in
                 let showsBoard = practice.mode != .names || practice.hint
                 let gap: CGFloat = 12
-                let notationHeight = showsBoard ? (space.size.height - gap) * 0.53 : space.size.height
+                let notationHeight = showsBoard ? max(0, space.size.height - gap) * 0.53 : max(0, space.size.height)
                 VStack(spacing: gap) {
                     notation.frame(height: notationHeight)
                     if showsBoard {
@@ -239,7 +239,7 @@ struct ContentView: View {
                 metric(practice.averageTime, caption: "平均找音时间")
             }
             Text("用过提示或跳过的音会优先安排复习。") .font(.system(size: 12 * scale)).foregroundStyle(muted)
-            Button("完成") { practice.showSummary = false }.buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
+            Button("完成") { practice.showSummary = false }.buttonStyle(EditorialButtonStyle(prominent: true)).keyboardShortcut(.defaultAction)
         }.padding(42).frame(width: 480 * scale).foregroundStyle(ink).background(palette.background)
     }
     private func eyebrow(_ text: String) -> some View { Text(text).font(.system(size: 12 * scale, weight: .medium)).foregroundStyle(muted) }

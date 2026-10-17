@@ -31,25 +31,22 @@ struct LearningView: View {
                 HStack {
                     Button { appearance.sidebarVisible.toggle() } label: { Image(systemName: "sidebar.left") }
                         .accessibilityLabel("显示或隐藏侧栏")
-                    Text(store.arpeggio ? "琶音练习" : "和弦练习").font(.system(size: 20 * scale, weight: .medium))
+                    Text(store.arpeggio ? "琶音练习" : "和弦练习").font(.system(size: 20 * scale, weight: .regular))
                     Spacer()
                     OpenSettingsButton()
-                }.buttonStyle(.bordered)
+                }.buttonStyle(EditorialButtonStyle())
                 Divider()
-                Picker("使用方式", selection: Binding(get: { drill.practicing }, set: { value in
-                    if value { drill.practicing = true }
-                    else { drill.reset(records: practice, audio: audio) }
-                })) {
-                    Text("学习").tag(false)
-                    Text("练习").tag(true)
-                }.pickerStyle(.segmented).labelsHidden().frame(width: 180)
+                HStack(spacing: 24) {
+                    modeLink("学习", practicing: false)
+                    modeLink("练习", practicing: true)
+                }
                 HStack {
                     Text(LearningShapes.roots[store.root] + store.quality.suffix)
-                        .font(.system(size: 24 * scale, weight: .medium))
+                        .font(.system(size: 24 * scale, weight: .regular))
                     Spacer()
                     if !drill.practicing {
                         Button("开始练习") { drill.practicing = true; startPractice() }
-                            .buttonStyle(.borderedProminent).disabled(audio.starting)
+                            .buttonStyle(EditorialButtonStyle(prominent: true)).disabled(audio.starting)
                     }
                 }
                 if drill.practicing { exercise }
@@ -81,10 +78,23 @@ struct LearningView: View {
             }
             }.disabled(drill.active || audio.starting)
             Spacer(minLength: 8)
-            Button("学习记录") { showHistory = true }.buttonStyle(.bordered)
+            Button("学习记录") { showHistory = true }.buttonStyle(EditorialButtonStyle())
             Text(drill.practicing ? (store.arpeggio ? "逐音判定 · 注意止音" : "多音判定 · 使用干净音色") : "学习模式 · 无需输入")
                 .font(.system(size: 12 * scale)).foregroundStyle(palette.muted)
         }.padding(20)
+    }
+    private func modeLink(_ title: String, practicing: Bool) -> some View {
+        let selected = drill.practicing == practicing
+        return Button {
+            if practicing { drill.practicing = true }
+            else { drill.reset(records: practice, audio: audio) }
+        } label: {
+            Text(title).font(.system(size: 13 * scale))
+                .foregroundStyle(selected ? palette.ink : palette.muted)
+                .underline(selected, color: palette.ink)
+                .padding(.vertical, 6)
+                .contentShape(Rectangle())
+        }.buttonStyle(.plain).accessibilityAddTraits(selected ? [.isSelected] : [])
     }
     private func startPractice() {
         guard !audio.starting, !drill.active else { return }
@@ -134,7 +144,7 @@ struct LearningView: View {
             ViewThatFits(in: .horizontal) {
                 HStack { exerciseButtons }
                 VStack(alignment: .leading, spacing: 8) { exerciseButtons }
-            }.buttonStyle(.bordered).font(.system(size: 12 * scale))
+            }.buttonStyle(EditorialButtonStyle()).font(.system(size: 12 * scale))
         }
     }
     @ViewBuilder private var exerciseButtons: some View {
@@ -148,7 +158,7 @@ struct LearningView: View {
             Button("结束练习") { drill.end(records: practice); audio.stop() }
         } else {
             Button(audio.starting ? "正在开启输入…" : "开始练习") { startPractice() }
-                .buttonStyle(.borderedProminent).disabled(audio.starting || audio.devices.isEmpty)
+                .buttonStyle(EditorialButtonStyle(prominent: true)).disabled(audio.starting || audio.devices.isEmpty)
         }
     }
     private var gallery: some View {
@@ -175,7 +185,7 @@ struct LearningView: View {
                             FretboardView(lower: example.shape.lower, upper: max(example.shape.lower + 1, example.shape.upper), learningTones: example.shape.tones, showsCaption: false)
                                 .frame(height: diagramHeight)
                                 .environment(\.interfaceScale, min(scale, 1.25))
-                            Divider()
+                            Color.clear.frame(height: 1)
                         }
                     }
                 }
@@ -186,7 +196,7 @@ struct LearningView: View {
                         .foregroundStyle(palette.muted).monospacedDigit()
                     Button("下一页") { store.position = min(pages - 1, page + 1) }.disabled(page + 1 >= pages)
                     Spacer(minLength: 0)
-                }.font(.system(size: 12 * scale)).buttonStyle(.bordered)
+                }.font(.system(size: 12 * scale)).buttonStyle(EditorialButtonStyle())
             }
         }
     }
@@ -207,7 +217,7 @@ struct ExerciseNavigation: View {
     private var palette: AppPalette { AppPalette(scheme: scheme, contrast: contrast) }
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("练习").font(.system(size: 12 * scale, weight: .medium)).foregroundStyle(palette.muted)
+            Text("FRETNOTE").font(.system(size: 12 * scale, weight: .regular)).tracking(1.5).foregroundStyle(palette.ink)
             ForEach(PracticeMode.allCases) { mode in
                 item(mode.rawValue, selected: !practice.learning && practice.mode == mode) {
                     drill.reset(records: practice, audio: audio)
@@ -231,12 +241,10 @@ struct ExerciseNavigation: View {
     private func item(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack {
-                Text(title).font(.system(size: 14 * scale, weight: .medium))
+                Text(title).font(.system(size: 14 * scale, weight: .regular)).underline(selected, color: palette.ink)
                 Spacer()
-                if selected { Text("—") }
-            }.padding(.vertical, 5).padding(.horizontal, 8)
+            }.padding(.vertical, 5)
                 .foregroundStyle(selected ? palette.ink : palette.muted)
-                .background(selected ? palette.selection : Color.clear, in: RoundedRectangle(cornerRadius: 6))
                 .contentShape(Rectangle())
         }.buttonStyle(.plain).accessibilityAddTraits(selected ? [.isSelected] : [])
     }

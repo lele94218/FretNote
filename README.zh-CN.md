@@ -40,6 +40,8 @@
 
 ![累计练习统计与每组学习记录](docs/screenshots/learning-history.jpg)
 
+主练习页面参考 [SSENSE](https://www.ssense.com/en-us) 的文字导航、黑白层次与规整网格，使用下划线选中态和直角按钮；保留原生 macOS 菜单、可调字号、指板比例和无需上下滚动的布局。
+
 ## 下载与安装
 
 从 [GitHub Releases](https://github.com/lele94218/FretNote/releases/latest) 下载 `FretNote-v0.3.1-macOS-arm64.zip`，解压后将 `FretNote.app` 拖入“应用程序”。需要 **Apple Silicon（M 系列）Mac、macOS 13 或更新版本**。当前发布包不支持 Intel；Intel 用户可尝试从源码构建，尚未验证。

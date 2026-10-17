@@ -43,6 +43,8 @@ Actual app views rendered with demo data; no personal learning records are shown
 
 ![Learning history with cumulative statistics and session results](docs/screenshots/learning-history.jpg)
 
+The main practice screens borrow the text-led navigation, restrained monochrome palette and editorial grid of [SSENSE](https://www.ssense.com/en-us). Native macOS menus, adjustable text, proportional diagrams and a single-window layout remain.
+
 ## Features
 
 - **Fretboard learning:** choose a root and quality to view a gallery of 135 triads or 137 shells, without connecting a guitar. The current source build also provides ordered arpeggio practice and experimental polyphonic chord practice.

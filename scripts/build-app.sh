@@ -6,7 +6,17 @@ BIN_DIR="$(swift build -c release --show-bin-path)"
 # Keep intermediate app bundles out of Launch Services discovery.
 mkdir -p "$PWD/.build" "$PWD/dist" "$HOME/Applications"
 STAGING_DIR="$(mktemp -d "$PWD/.build/app-package.XXXXXX")"
-trap 'rm -rf "$STAGING_DIR"' EXIT
+INSTALL_DIR="$(mktemp -d "$HOME/Applications/.FretNote-install.XXXXXX")"
+cleanup() {
+    if [ ! -e "$HOME/Applications/FretNote.app" ] && [ -d "$INSTALL_DIR/previous.app" ]; then
+        if ! mv "$INSTALL_DIR/previous.app" "$HOME/Applications/FretNote.app"; then
+            echo "Could not restore previous app; retained at $INSTALL_DIR/previous.app" >&2
+            return 1
+        fi
+    fi
+    rm -rf "$STAGING_DIR" "$INSTALL_DIR"
+}
+trap cleanup EXIT
 APP="$STAGING_DIR/FretNote.app"
 INSTALLED_APP="$HOME/Applications/FretNote.app"
 LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
@@ -22,7 +32,13 @@ codesign --verify --deep --strict "$APP"
 if pgrep -x FretNote >/dev/null; then
     osascript -e 'tell application id "com.lele94218.FretNote" to quit'
 fi
-ditto "$APP" "$INSTALLED_APP"
+# Verify a fresh copy on the destination volume; never merge old bundle resources.
+ditto "$APP" "$INSTALL_DIR/FretNote.app"
+codesign --verify --deep --strict "$INSTALL_DIR/FretNote.app"
+if [ -e "$INSTALLED_APP" ]; then
+    mv "$INSTALLED_APP" "$INSTALL_DIR/previous.app"
+fi
+mv "$INSTALL_DIR/FretNote.app" "$INSTALLED_APP"
 codesign --verify --deep --strict "$INSTALLED_APP"
 # Remove the previous public build location only after installing successfully.
 if [ -d "$PWD/dist/FretNote.app" ]; then
