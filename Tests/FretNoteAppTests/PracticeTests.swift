@@ -197,6 +197,7 @@ final class PracticeTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let appearance = AppearancePreferences(defaults: defaults)
+        appearance.language = ProcessInfo.processInfo.environment["FRETNOTE_SNAPSHOT_LANGUAGE"] == "en" ? .english : .chinese
         let audio = AudioInput()
         let store = PracticeStore(file: folder.appendingPathComponent("unused-progress.json"))
         let scenes: [(String, PracticeMode, Int, Int, Bool)] = [
@@ -221,6 +222,7 @@ final class PracticeTests: XCTestCase {
             store.naturalsOnly = store.notes.allSatisfy(\.isNatural)
             let view = ContentView(audio: audio, practice: store)
                 .environmentObject(appearance)
+                .environment(\.appLanguage, ProcessInfo.processInfo.environment["FRETNOTE_SNAPSHOT_LANGUAGE"] == "en" ? .english : .chinese)
                 .environment(\.interfaceScale, scale)
                 .preferredColorScheme(theme.colorScheme)
                 .frame(width: width, height: height)
@@ -282,6 +284,7 @@ final class PracticeTests: XCTestCase {
         for tab in [0, 1] {
         let settings = AppSettingsView(audio: audio, initialTab: tab)
             .environmentObject(appearance)
+                .environment(\.appLanguage, ProcessInfo.processInfo.environment["FRETNOTE_SNAPSHOT_LANGUAGE"] == "en" ? .english : .chinese)
             .environment(\.interfaceScale, scale)
             .preferredColorScheme(theme.colorScheme)
         let settingsHost = NSHostingView(rootView: settings)

@@ -1,7 +1,8 @@
 import SwiftUI
 import FretNoteCore
 
-struct LearningHistoryView: View {
+struct LearningHistoryView: View, Localizable {
+    @Environment(\.appLanguage) var language
     @ObservedObject var practice: PracticeStore
     @Environment(\.dismiss) private var dismiss
     @Environment(\.interfaceScale) private var scale
@@ -20,26 +21,26 @@ struct LearningHistoryView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("学习记录").font(.editorial(size: 22 * scale, weight: .medium))
+            Text(L("学习记录")).font(.editorial(size: 22 * scale, weight: .medium))
             HStack(alignment: .top, spacing: 32) {
-                metric("\(attempts)", "累计练习音符")
-                metric(attempts == 0 ? "—" : "\(Int(Double(correct) / Double(attempts) * 100))%", "首次正确率")
-                metric(attempts == 0 ? "—" : String(format: "%.1f 秒", seconds / Double(attempts)), "平均找音时间")
+                metric("\(attempts)", L("累计练习音符"))
+                metric(attempts == 0 ? "—" : "\(Int(Double(correct) / Double(attempts) * 100))%", L("首次正确率"))
+                metric(attempts == 0 ? "—" : String(format: L("%.1f 秒"), seconds / Double(attempts)), L("平均找音时间"))
                 Spacer(minLength: 0)
             }
-            Text("三音练习 \(practice.sessions.filter { $0.questionCount != nil }.reduce(0) { $0 + $1.answered }) 题 · 单独按完整题目统计")
+            Text(L("三音练习 \(practice.sessions.filter { $0.questionCount != nil }.reduce(0) { $0 + $1.answered }) 题 · 单独按完整题目统计"))
                 .font(.editorial(size: 11 * scale)).foregroundStyle(palette.muted)
             Divider()
-            Picker("记录内容", selection: $tab) {
-                Text("练习历史").tag(0)
-                Text("优先复习").tag(1)
+            Picker(L("记录内容"), selection: $tab) {
+                Text(L("练习历史")).tag(0)
+                Text(L("优先复习")).tag(1)
             }.pickerStyle(.segmented).labelsHidden()
                 .onChange(of: tab) { _ in page = 0 }
             if count == 0 {
                 VStack(spacing: 10) {
                     Image(systemName: "clock").font(.system(size: 28 * scale))
-                    Text(tab == 0 ? "还没有练习历史" : "还没有待复习的音")
-                    Text(tab == 0 ? "完成一个音就会自动记录；之前的统计已保留。" : "练习后，这里会显示需要多练的音。")
+                    Text(L(tab == 0 ? L("还没有练习历史") : L("还没有待复习的音")))
+                    Text(L(tab == 0 ? L("完成一个音就会自动记录；之前的统计已保留。") : L("练习后，这里会显示需要多练的音。")))
                         .font(.editorial(size: 12 * scale)).foregroundStyle(palette.muted)
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -61,17 +62,17 @@ struct LearningHistoryView: View {
                     }
                 }.frame(maxHeight: .infinity)
             }
-            Text(tab == 0 ? "用过提示、弹错后重试或跳过，均不计为首次正确。" : "按复习优先级排序；位置为题目参考，音高识别无法确认实际弦位。")
+            Text(L(tab == 0 ? L("用过提示、弹错后重试或跳过，均不计为首次正确。") : L("按复习优先级排序；位置为题目参考，音高识别无法确认实际弦位。")))
                 .font(.editorial(size: 11 * scale)).foregroundStyle(palette.muted)
             Divider()
             HStack(spacing: 12) {
                 Button { page = max(0, safePage - 1) } label: { Image(systemName: "chevron.left") }
-                    .disabled(safePage == 0).accessibilityLabel("上一页")
-                Text("\(safePage + 1) / \(pages)").monospacedDigit().foregroundStyle(palette.muted)
+                    .disabled(safePage == 0).accessibilityLabel(L("上一页"))
+                Text(L("\(safePage + 1) / \(pages)")).monospacedDigit().foregroundStyle(palette.muted)
                 Button { page = min(pages - 1, safePage + 1) } label: { Image(systemName: "chevron.right") }
-                    .disabled(safePage + 1 >= pages).accessibilityLabel("下一页")
+                    .disabled(safePage + 1 >= pages).accessibilityLabel(L("下一页"))
                 Spacer()
-                Button("完成") { dismiss() }.keyboardShortcut(.defaultAction)
+                Button(L("完成")) { dismiss() }.keyboardShortcut(.defaultAction)
             }.buttonStyle(.bordered)
         }
         .padding(20)
@@ -82,27 +83,27 @@ struct LearningHistoryView: View {
 
     private func metric(_ value: String, _ caption: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(value).font(.editorial(size: 22 * scale)).monospacedDigit()
-            Text(caption).font(.editorial(size: 11 * scale)).foregroundStyle(palette.muted)
+            Text(L(value)).font(.editorial(size: 22 * scale)).monospacedDigit()
+            Text(L(caption)).font(.editorial(size: 11 * scale)).foregroundStyle(palette.muted)
         }
     }
 
     private func sessionRow(_ session: LearningSession) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(session.mode).fontWeight(.medium)
-                Text(session.answered >= (session.questionCount ?? 20) ? "已完成" : (session.endedAt == nil ? "已保存" : "提前结束"))
+                Text(L(session.mode)).fontWeight(.medium)
+                Text(L(session.answered >= (session.questionCount ?? 20) ? L("已完成") : (session.endedAt == nil ? L("已保存") : L("提前结束"))))
                     .font(.editorial(size: 11 * scale)).foregroundStyle(palette.muted)
                 Spacer()
-                Text(session.startedAt.formatted(.dateTime.month().day().hour().minute()))
+                Text(L(session.startedAt.formatted(.dateTime.month().day().hour().minute().locale(language.locale))))
                     .font(.editorial(size: 11 * scale)).foregroundStyle(palette.muted)
-                    .help(session.startedAt.formatted(date: .complete, time: .shortened))
+                    .help(session.startedAt.formatted(.dateTime.year().month(.wide).day().hour().minute().locale(language.locale)))
             }
-            Text(session.scope).font(.editorial(size: 11 * scale)).foregroundStyle(palette.muted)
+            Text(L(session.scope)).font(.editorial(size: 11 * scale)).foregroundStyle(palette.muted)
             HStack {
-                Text("\(session.answered) \(session.unit) · 首次正确 \(session.accuracy) · 平均 \(session.averageTime)")
+                Text(L("\(session.answered) \(session.unit) · 首次正确 \(session.accuracy) · 平均 \(session.averageTime)"))
                 Spacer(minLength: 0)
-                Text("提示 \(session.hints) · 跳过 \(session.skipped)")
+                Text(L("提示 \(session.hints) · 跳过 \(session.skipped)"))
             }.font(.editorial(size: 11 * scale)).monospacedDigit()
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -110,11 +111,11 @@ struct LearningHistoryView: View {
     private func noteRow(_ note: GuitarNote, _ score: NoteProgress) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("\(note.fullName) · \(note.string) 弦 \(note.fret) 品").fontWeight(.medium)
+                Text(L("\(note.fullName) · \(note.string) 弦 \(note.fret) 品")).fontWeight(.medium)
                 Spacer()
-                Text(score.due <= Date() ? "待复习" : "巩固中").foregroundStyle(palette.muted)
+                Text(L(score.due <= Date() ? L("待复习") : L("巩固中"))).foregroundStyle(palette.muted)
             }
-            Text("练过 \(score.attempts) 次 · 首次正确 \(Int(score.accuracy * 100))% · 平均 \(String(format: "%.1f", score.totalSeconds / Double(max(1, score.attempts)))) 秒")
+            Text(L("练过 \(score.attempts) 次 · 首次正确 \(Int(score.accuracy * 100))% · 平均 \(String(format: "%.1f", score.totalSeconds / Double(max(1, score.attempts)))) 秒"))
                 .font(.editorial(size: 11 * scale)).foregroundStyle(palette.muted).monospacedDigit()
         }.frame(maxWidth: .infinity, alignment: .leading)
     }

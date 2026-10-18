@@ -2,7 +2,8 @@ import SwiftUI
 import FretNoteCore
 
 /// Fit drawings uniformly into their allotted space; never stretch or scroll them.
-struct FixedDiagram<Content: View>: View {
+struct FixedDiagram<Content: View>: View, Localizable {
+    @Environment(\.appLanguage) var language
     let size: CGSize
     @ViewBuilder let content: () -> Content
     var body: some View {
@@ -16,7 +17,8 @@ struct FixedDiagram<Content: View>: View {
     }
 }
 
-struct StaffView: View {
+struct StaffView: View, Localizable {
+    @Environment(\.appLanguage) var language
     let notes: [GuitarNote]
     let current: Int
     let showNames: Bool
@@ -58,7 +60,7 @@ struct StaffView: View {
                     let y = bottom - CGFloat(note.staffStep) * 7
                     let color = i < current ? palette.muted : ink
                     if i == current {
-                        context.draw(Text("↓").font(.editorial(size: 18)).foregroundColor(ink), at: CGPoint(x: x, y: 12))
+                        context.draw(Text(L("↓")).font(.editorial(size: 18)).foregroundColor(ink), at: CGPoint(x: x, y: 12))
                     }
                     if note.staffStep < 0 {
                         for step in stride(from: -2, through: note.staffStep, by: -2) {
@@ -82,14 +84,14 @@ struct StaffView: View {
                     }
                     accidentals[note.staffStep] = !note.isNatural
                     if showNames {
-                        context.draw(Text(note.name).font(.editorial(size: 15, weight: .medium)).foregroundColor(color),
+                        context.draw(Text(L(note.name)).font(.editorial(size: 15, weight: .medium)).foregroundColor(color),
                                      at: CGPoint(x: x, y: labelY))
                     }
                 }
             }
         }
-        .accessibilityLabel("吉他高音谱表，实际发声低八度")
-        .accessibilityValue((notes.indices.contains(current) ? "当前第 \(current + 1) 个音：\(notes[current].fullName)。" : "本题完成。") + "全曲：" + notes.map(\.fullName).joined(separator: "，"))
+        .accessibilityLabel(L("吉他高音谱表，实际发声低八度"))
+        .accessibilityValue((notes.indices.contains(current) ? L("当前第 \(current + 1) 个音：\(notes[current].fullName)。") : L("本题完成。")) + L("全曲：") + notes.map(\.fullName).joined(separator: "，"))
     }
     private func ledger(_ context: inout GraphicsContext, x: CGFloat, y: CGFloat, color: Color) {
         var path = Path()
@@ -101,7 +103,8 @@ struct StaffView: View {
 
 /// Equal-tempered fret spacing. Later frets are physically closer together.
 /// Open strings sit to the left of the nut, outside the fretted neck.
-struct FretboardView: View {
+struct FretboardView: View, Localizable {
+    @Environment(\.appLanguage) var language
     let lower: Int
     let upper: Int
     var highlightedNote: GuitarNote? = nil
@@ -160,7 +163,7 @@ struct FretboardView: View {
                         let left = fretLeft(fret)
                         let center = left + fretWidth(fret) / 2
                         let inRange = (lower...upper).contains(fret)
-                        context.draw(Text(fret == 0 ? "空弦" : "\(fret)").font(.editorial(size: 11))
+                        context.draw(Text(L(fret == 0 ? L("空弦") : "\(fret)")).font(.editorial(size: 11))
                             .foregroundColor(inRange ? ink : palette.muted), at: CGPoint(x: center, y: 132))
                         let x = left + fretWidth(fret)
                         let taper = max(0, (x - neckLeft) / (right - neckLeft)) * 4
@@ -210,7 +213,7 @@ struct FretboardView: View {
                         let marker = Path(roundedRect: CGRect(x: x - 10, y: y - 6.5, width: 20, height: 13), cornerRadius: 5)
                         context.fill(marker, with: .color(.white))
                         context.stroke(marker, with: .color(.black), lineWidth: tone.degree == "1" ? 1.5 : 0.7)
-                        context.draw(Text(tone.degree).font(.editorial(size: 9, weight: .bold)).foregroundColor(.black), at: CGPoint(x: x, y: y))
+                        context.draw(Text(L(tone.degree)).font(.editorial(size: 9, weight: .bold)).foregroundColor(.black), at: CGPoint(x: x, y: y))
                     }
                     if let note = highlightedNote, (firstFret...lastFret).contains(note.fret), (1...6).contains(note.string) {
                         let x = fretLeft(note.fret) + fretWidth(note.fret) / 2
@@ -222,18 +225,18 @@ struct FretboardView: View {
                 }
             }
             .frame(maxHeight: 160)
-            .accessibilityLabel("吉他指板，一弦在上，六弦在下；练习范围第 \(lower) 到 \(upper) 品")
-            .accessibilityValue(!learningTones.isEmpty ? learningTones.map { "\($0.name)，\($0.degree)，第 \($0.note.string) 弦第 \($0.note.fret) 品" }.joined(separator: "；") : highlightedNote.map { "参考位置：第 \($0.string) 弦，第 \($0.fret) 品" } ?? "未显示答案位置")
+            .accessibilityLabel(L("吉他指板，一弦在上，六弦在下；练习范围第 \(lower) 到 \(upper) 品"))
+            .accessibilityValue(!learningTones.isEmpty ? learningTones.map { L("\($0.name)，\($0.degree)，第 \($0.note.string) 弦第 \($0.note.fret) 品") }.joined(separator: "；") : highlightedNote.map { L("参考位置：第 \($0.string) 弦，第 \($0.fret) 品") } ?? L("未显示答案位置"))
         }
     }
     private var rangeLabel: some View {
-        Text("把位 · \(lower == 0 ? "空弦" : "第 \(lower) 品")–第 \(upper) 品").fixedSize()
+        Text(L("把位 · \(lower == 0 ? "空弦" : "第 \(lower) 品")–第 \(upper) 品")).fixedSize()
     }
     private var hintLabel: some View {
         Group {
             if let note = highlightedNote {
-                Text("参考位置：\(note.string) 弦 · \(note.fret == 0 ? "空弦" : "第 \(note.fret) 品")")
-            } else { Text("一弦在上 · 六弦在下") }
+                Text(L("参考位置：\(note.string) 弦 · \(note.fret == 0 ? "空弦" : "第 \(note.fret) 品")"))
+            } else { Text(L("一弦在上 · 六弦在下")) }
         }.fixedSize()
     }
 }

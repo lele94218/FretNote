@@ -14,11 +14,13 @@ enum AppTheme: String, CaseIterable, Identifiable {
 @MainActor
 final class AppearancePreferences: ObservableObject {
     @Published var sidebarVisible = true
+    @Published var language: AppLanguage { didSet { defaults.set(language.rawValue, forKey: "appearance.language") } }
     @Published var theme: AppTheme { didSet { defaults.set(theme.rawValue, forKey: "appearance.theme") } }
     @Published private(set) var fontScale: Double
     private let defaults: UserDefaults
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        language = AppLanguage(rawValue: defaults.string(forKey: "appearance.language") ?? "zh-Hans") ?? .chinese
         theme = AppTheme(rawValue: defaults.string(forKey: "appearance.theme") ?? "system") ?? .system
         let saved = defaults.object(forKey: "appearance.fontScale") as? Double ?? 1.25
         fontScale = saved.isFinite ? min(1.75, max(1, saved)) : 1.25

@@ -1,7 +1,8 @@
 import SwiftUI
 
 @main
-struct FretNoteApp: App {
+struct FretNoteApp: App, Localizable {
+    var language: AppLanguage { appearance.language }
     @StateObject private var audio = AudioInput()
     @StateObject private var practice = PracticeStore()
     @StateObject private var appearance = AppearancePreferences()
@@ -9,6 +10,8 @@ struct FretNoteApp: App {
         WindowGroup {
             ContentView(audio: audio, practice: practice)
                 .environmentObject(appearance)
+                .environment(\.appLanguage, appearance.language)
+                .environment(\.locale, appearance.language.locale)
                 .environment(\.interfaceScale, appearance.fontScale)
                 .preferredColorScheme(appearance.theme.colorScheme)
                 .frame(minWidth: 1040, minHeight: 740)
@@ -20,20 +23,20 @@ struct FretNoteApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {}
             CommandGroup(after: .sidebar) {
-                Button(appearance.sidebarVisible ? "隐藏侧栏" : "显示侧栏") { appearance.sidebarVisible.toggle() }
+                Button(appearance.sidebarVisible ? L("隐藏侧栏") : L("显示侧栏")) { appearance.sidebarVisible.toggle() }
                     .keyboardShortcut("s", modifiers: [.command, .control])
             }
-            CommandMenu("练习") {
-                Button(practice.active ? "结束练习" : "开始练习") {
+            CommandMenu(L("练习")) {
+                Button(practice.active ? L("结束练习") : L("开始练习")) {
                     if practice.active { practice.end() } else { practice.start() }
                 }.keyboardShortcut(.return, modifiers: .command)
                     .disabled(practice.learning || practice.showSummary || (!practice.active && !audio.running))
-                Button("提示位置") { practice.reveal() }.keyboardShortcut("h", modifiers: [.command, .shift])
+                Button(L("提示位置")) { practice.reveal() }.keyboardShortcut("h", modifiers: [.command, .shift])
                     .disabled(!practice.active || practice.completed)
-                Button("跳过") { practice.skip() }.keyboardShortcut(.rightArrow, modifiers: .command)
+                Button(L("跳过")) { practice.skip() }.keyboardShortcut(.rightArrow, modifiers: .command)
                     .disabled(!practice.active || practice.completed)
                 Divider()
-                Button(audio.running ? "停止监听" : "开启输入") {
+                Button(audio.running ? L("停止监听") : L("开启输入")) {
                     if audio.running { audio.stop() } else { Task { await audio.start() } }
                 }.keyboardShortcut("i", modifiers: [.command, .shift])
                     .disabled(practice.learning || audio.starting || audio.devices.isEmpty)
@@ -42,6 +45,8 @@ struct FretNoteApp: App {
         Settings {
             AppSettingsView(audio: audio)
                 .environmentObject(appearance)
+                .environment(\.appLanguage, appearance.language)
+                .environment(\.locale, appearance.language.locale)
                 .environment(\.interfaceScale, appearance.fontScale)
                 .preferredColorScheme(appearance.theme.colorScheme)
         }

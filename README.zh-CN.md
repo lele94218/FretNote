@@ -16,6 +16,8 @@
 
 ![和弦学习与统一练习侧栏](docs/screenshots/chord-learning-light.jpg)
 
+![英文界面](docs/screenshots/chord-learning-english.jpg)
+
 ### 琶音练习
 
 ![琶音指板、音级、音名与弦品位置](docs/screenshots/arpeggio-learning-light.jpg)
@@ -40,7 +42,9 @@
 
 ![累计练习统计与每组学习记录](docs/screenshots/learning-history.jpg)
 
-主练习页面参考 [SSENSE](https://www.ssense.com/en-us) 的文字导航、黑白层次与规整网格，使用下划线选中态和直角按钮；保留原生 macOS 菜单、可调字号、指板比例和无需上下滚动的布局。英文和数字统一使用内置 [Inter 4.1](https://github.com/rsms/inter/releases/tag/v4.1)，中文使用苹方。Inter 是开源替代字体，并非 SSENSE 的定制 Favorit；五线谱继续使用 Bravura。
+主练习页面参考 [SSENSE](https://www.ssense.com/en-us) 的文字导航、黑白层次与规整网格，使用下划线选中态和直角按钮；保留原生 macOS 菜单、可调字号、指板比例和无需上下滚动的布局。本机版本可使用用户提供的 Favorit SSENSE Inter / Regular，中文使用苹方。公开构建内置 OFL 许可的 Inter 作为后备字体，仓库不包含 SSENSE 商业字体。五线谱继续使用 Bravura。
+
+在 **设置 → 外观 → 语言 / Language** 中切换 **简体中文 / English**。选择会保存并立即应用到控件、练习提示和已有学习记录，不会重置练习。
 
 ## 下载与安装
 
@@ -161,6 +165,6 @@ Resources/AppIcon.svg      图标矢量源文件
 
 欢迎提交 Issue 和 Pull Request。提交前运行 `swift test`，涉及音频时请注明设备、macOS 版本和复现步骤；请勿提交个人学习记录、凭据或未经授权的录音。
 
-Inter 按 [SIL Open Font License 1.1](Sources/FretNoteApp/Resources/Inter-LICENSE.txt) 分发。
+Inter 按 [SIL Open Font License 1.1](Sources/FretNoteApp/Resources/Inter-LICENSE.txt) 分发。本地提供的商业字体保留原许可，不随公开安装包分发。
 
 项目代码采用 [MIT License](LICENSE)。内置的 Bravura 字体及其元数据保留原许可，详见 [Bravura 许可证](Sources/FretNoteApp/Resources/Bravura-LICENSE.txt)。

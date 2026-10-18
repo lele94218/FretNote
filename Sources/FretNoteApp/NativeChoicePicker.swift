@@ -1,6 +1,7 @@
 import SwiftUI
 
-struct NativeChoicePicker<Value: Hashable>: NSViewRepresentable {
+struct NativeChoicePicker<Value: Hashable>: NSViewRepresentable, Localizable {
+    @Environment(\.appLanguage) var language
     @Binding var selection: Value
     let options: [Value]
     let label: (Value) -> String
@@ -26,7 +27,7 @@ struct NativeChoicePicker<Value: Hashable>: NSViewRepresentable {
 
     func updateNSView(_ button: NSPopUpButton, context: Context) {
         context.coordinator.parent = self
-        let titles = options.map(label)
+        let titles = options.map { L(label($0)) }
         // Audio level updates redraw the parent frequently. Do not rebuild a tracking menu.
         if button.itemTitles != titles {
             button.removeAllItems()
@@ -40,13 +41,13 @@ struct NativeChoicePicker<Value: Hashable>: NSViewRepresentable {
             button.selectItem(at: selectedIndex)
         } else {
             button.select(nil)
-            button.title = "无可用选项"
+            button.title = L("无可用选项")
         }
         let font = AppTypography.nativeFont(size: 12 * scale)
         button.font = font
         button.menu?.font = font
         button.menu?.minimumWidth = 112
-        button.setAccessibilityLabel(accessibilityTitle)
+        button.setAccessibilityLabel(L(accessibilityTitle))
         button.isEnabled = enabled && !options.isEmpty
         button.appearance = NSAppearance(named: colorScheme == .dark ? .darkAqua : .aqua)
         button.sizeToFit()

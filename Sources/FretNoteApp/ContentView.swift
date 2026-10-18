@@ -1,7 +1,8 @@
 import SwiftUI
 import FretNoteCore
 
-struct ContentView: View {
+struct ContentView: View, Localizable {
+    @Environment(\.appLanguage) var language
     @EnvironmentObject private var appearance: AppearancePreferences
     @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.colorScheme) private var colorScheme
@@ -48,9 +49,9 @@ struct ContentView: View {
                 actionBar.padding(.horizontal, 24).padding(.vertical, 12)
                 if audio.running {
                     HStack {
-                        Text(audio.reading.map { "听到 \(GuitarNote.names[($0.midi % 12 + 12) % 12])\($0.midi / 12 - 1)" } ?? "等待清晰的单音")
+                        Text(L(audio.reading.map { L("听到 \(GuitarNote.names[($0.midi % 12 + 12) % 12])\($0.midi / 12 - 1)") } ?? L("等待清晰的单音")))
                         Spacer()
-                        Text(audio.level > 0.8 ? "电平过高，请降低声卡增益" : (audio.level > 0 ? String(format: "输入 %.0f dB", 20 * log10(audio.level)) : "暂无输入信号"))
+                        Text(L(audio.level > 0.8 ? L("电平过高，请降低声卡增益") : (audio.level > 0 ? String(format: L("输入 %.0f dB"), 20 * log10(audio.level)) : L("暂无输入信号"))))
                     }.font(.editorial(size: 12 * scale)).foregroundStyle(muted)
                         .padding(.horizontal, 24).padding(.bottom, 12)
                 }
@@ -58,13 +59,13 @@ struct ContentView: View {
                 exercise.padding(.horizontal, 20).padding(.vertical, 12)
                 rule.frame(height: 1)
                 HStack {
-                    Text("首次正确 \(practice.accuracy) · 平均 \(practice.averageTime)")
+                    Text(L("首次正确 \(practice.accuracy) · 平均 \(practice.averageTime)"))
                         .foregroundStyle(muted)
                     Spacer()
                     if audio.error != nil || practice.persistenceError != nil {
-                        Button { showError = true } label: { Label("查看问题", systemImage: "exclamationmark.circle") }
+                        Button { showError = true } label: { Label(L("查看问题"), systemImage: "exclamationmark.circle") }
                     }
-                    Button("学习记录") { showProgress = true }
+                    Button(L("学习记录")) { showProgress = true }
                 }.font(.editorial(size: 12 * scale)).buttonStyle(EditorialButtonStyle())
                     .padding(.horizontal, 20).padding(.vertical, 12)
             }.frame(minWidth: 600)
@@ -82,10 +83,10 @@ struct ContentView: View {
             LearningHistoryView(practice: practice)
                 .preferredColorScheme(appearance.theme.colorScheme)
         }
-        .alert("需要处理的问题", isPresented: $showError) {
-            Button("知道了", role: .cancel) {}
+        .alert(L("需要处理的问题"), isPresented: $showError) {
+            Button(L("知道了"), role: .cancel) {}
         } message: {
-            Text([audio.error, practice.persistenceError].compactMap { $0 }.joined(separator: "\n\n"))
+            Text(L([audio.error, practice.persistenceError].compactMap { $0 }.joined(separator: "\n\n")))
         }
         .sheet(isPresented: $practice.showSummary) {
             summary.preferredColorScheme(appearance.theme.colorScheme)
@@ -95,56 +96,56 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 12) {
             ExerciseNavigation(practice: practice, audio: audio, learning: learningStore, drill: shapePractice)
             VStack(alignment: .leading, spacing: 12) {
-                eyebrow("练习范围")
+                eyebrow(L("练习范围"))
                 if practice.mode == .names {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("琴弦 · 可多选").foregroundStyle(muted)
+                        Text(L("琴弦 · 可多选")).foregroundStyle(muted)
                         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
                             ForEach(1...6, id: \.self) { number in
                                 Toggle(isOn: Binding(
                                     get: { practice.selectedStrings.contains(number) },
                                     set: { practice.setString(number, selected: $0) }
                                 )) {
-                                    Text("\(number)").frame(maxWidth: .infinity)
+                                    Text(L("\(number)")).frame(maxWidth: .infinity)
                                 }.toggleStyle(.button)
-                                    .accessibilityLabel("第 \(number) 弦")
-                                    .help("选择要练习的琴弦，至少保留一根")
+                                    .accessibilityLabel(L("第 \(number) 弦"))
+                                    .help(L("选择要练习的琴弦，至少保留一根"))
                             }
                         }
                     }
                 }
                 if practice.mode != .names {
                 VStack(spacing: 12) {
-                    HStack { Text("起始品"); Spacer(); ScaledPicker(accessibilityName: "起始品", controlWidth: 72, selection: $practice.lowerFret, options: Array((practice.customRange ? 0 : 1)...(practice.customRange ? PracticeStore.maximumFret : PracticeStore.maximumFret - 3))) { "\($0)" }.accessibilityLabel("起始品") }
+                    HStack { Text(L("起始品")); Spacer(); ScaledPicker(accessibilityName: L("起始品"), controlWidth: 72, selection: $practice.lowerFret, options: Array((practice.customRange ? 0 : 1)...(practice.customRange ? PracticeStore.maximumFret : PracticeStore.maximumFret - 3))) { "\($0)" }.accessibilityLabel(L("起始品")) }
                     if practice.customRange {
-                        HStack { Text("结束品"); Spacer(); ScaledPicker(accessibilityName: "结束品", controlWidth: 72, selection: $practice.upperFret, options: Array(practice.lowerFret...min(PracticeStore.maximumFret, practice.lowerFret + 5))) { "\($0)" }.accessibilityLabel("结束品") }
+                        HStack { Text(L("结束品")); Spacer(); ScaledPicker(accessibilityName: L("结束品"), controlWidth: 72, selection: $practice.upperFret, options: Array(practice.lowerFret...min(PracticeStore.maximumFret, practice.lowerFret + 5))) { "\($0)" }.accessibilityLabel(L("结束品")) }
                     } else {
-                        Text("第 \(practice.lowerFret)–\(practice.upperFret) 品 · 四个品格")
+                        Text(L("第 \(practice.lowerFret)–\(practice.upperFret) 品 · 四个品格"))
                             .foregroundStyle(muted).frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
-                Toggle("自定义范围", isOn: $practice.customRange).toggleStyle(.checkbox)
+                Toggle(L("自定义范围"), isOn: $practice.customRange).toggleStyle(.checkbox)
                 }
-                Toggle("只练自然音", isOn: $practice.naturalsOnly).toggleStyle(.checkbox).controlSize(.large)
+                Toggle(L("只练自然音"), isOn: $practice.naturalsOnly).toggleStyle(.checkbox).controlSize(.large)
                 if practice.mode != .names {
-                    Toggle("显示音名辅助", isOn: $practice.showNames).toggleStyle(.checkbox).controlSize(.large)
+                    Toggle(L("显示音名辅助"), isOn: $practice.showNames).toggleStyle(.checkbox).controlSize(.large)
                 }
                 if practice.mode == .melody {
-                    ScaledPicker(title: "旋律长度", selection: $practice.melodyLength, options: Array(3...5)) { "\($0) 个音" }
+                    ScaledPicker(title: L("旋律长度"), selection: $practice.melodyLength, options: Array(3...5)) { L("\($0) 个音") }
                 }
             }.font(.editorial(size: 12 * scale)).disabled(practice.active)
             Spacer()
-            Text("单音 · 标准调弦")
-                .help("单音练习，不考核节奏。请按指定弦与把位弹奏；音高识别无法验证实际弦位。")
+            Text(L("单音 · 标准调弦"))
+                .help(L("单音练习，不考核节奏。请按指定弦与把位弹奏；音高识别无法验证实际弦位。"))
                 .font(.editorial(size: 12 * scale)).foregroundStyle(muted).lineSpacing(5)
         }.padding(20)
     }
     private var header: some View {
         HStack(spacing: 16) {
             Button { appearance.sidebarVisible.toggle() } label: { Image(systemName: "sidebar.left") }
-                .accessibilityLabel(appearance.sidebarVisible ? "隐藏侧栏" : "显示侧栏")
-                .help("显示或隐藏侧栏（⌃⌘S）")
-            Text(practice.mode.rawValue).font(.editorial(size: 20 * scale, weight: .regular))
+                .accessibilityLabel(appearance.sidebarVisible ? L("隐藏侧栏") : L("显示侧栏"))
+                .help(L("显示或隐藏侧栏（⌃⌘S）"))
+            Text(L(practice.mode.rawValue)).font(.editorial(size: 20 * scale, weight: .regular))
             Spacer()
             OpenSettingsButton()
         }.buttonStyle(EditorialButtonStyle())
@@ -160,31 +161,31 @@ struct ContentView: View {
     }
     private var listeningControls: some View {
         HStack(spacing: 10) {
-            Button(audio.starting ? "正在启动…" : (audio.running ? "停止监听" : "开启输入")) {
+            Button(audio.starting ? L("正在启动…") : (audio.running ? L("停止监听") : L("开启输入"))) {
                 if audio.running { audio.stop() } else { Task { await audio.start() } }
             }.disabled(audio.starting || audio.devices.isEmpty)
-            Text(audio.running ? "正在监听" : "输入未开启").foregroundStyle(muted)
+            Text(L(audio.running ? L("正在监听") : L("输入未开启"))).foregroundStyle(muted)
         }.fixedSize()
     }
     private var practiceControls: some View {
         HStack(spacing: 10) {
             if practice.active {
-                Button("提示位置") { practice.reveal() }.disabled(practice.completed)
-                Button("跳过") { practice.skip() }.disabled(practice.completed)
-                Button("结束练习") { practice.end() }
+                Button(L("提示位置")) { practice.reveal() }.disabled(practice.completed)
+                Button(L("跳过")) { practice.skip() }.disabled(practice.completed)
+                Button(L("结束练习")) { practice.end() }
             } else {
-                Button("开始练习") { practice.start() }
+                Button(L("开始练习")) { practice.start() }
                     .buttonStyle(EditorialButtonStyle(prominent: true)).disabled(!audio.running)
-                    .help(audio.running ? "开始一组 20 个音的练习（⌘Return）" : "先点击左侧“开启输入”")
+                    .help(audio.running ? L("开始一组 20 个音的练习（⌘Return）") : L("先点击左侧“开启输入”"))
             }
         }.fixedSize()
     }
     private var exercise: some View {
         VStack(spacing: 12) {
             HStack {
-                Text(practice.mode == .names ? "\(practice.notes.isEmpty ? practice.selectedStringLabel : "第 \(practice.currentString) 弦") · 全弦找音" : "第 \(practice.lowerFret)–\(practice.upperFret) 品 · 六根弦")
+                Text(L(practice.mode == .names ? L("\(practice.notes.isEmpty ? practice.selectedStringLabel : "第 \(practice.currentString) 弦") · 全弦找音") : L("第 \(practice.lowerFret)–\(practice.upperFret) 品 · 六根弦")))
                 Spacer()
-                Text("\(practice.answered) / 20 音").monospacedDigit()
+                Text(L("\(practice.answered) / 20 音")).monospacedDigit()
             }.font(.editorial(size: 12 * scale)).foregroundStyle(muted)
             GeometryReader { space in
                 let showsBoard = practice.mode != .names || practice.hint
@@ -205,7 +206,7 @@ struct ContentView: View {
                 if practice.feedbackKind != 0 {
                     Image(systemName: practice.feedbackKind > 0 ? "checkmark" : "xmark")
                 }
-                Text(practice.notes.isEmpty ? "开启输入后，点击开始练习。" : practice.feedback)
+                Text(L(practice.notes.isEmpty ? L("开启输入后，点击开始练习。") : practice.feedback))
             }.font(.editorial(size: 13 * scale))
                 .foregroundStyle(practice.feedbackKind == 0 ? muted : ink)
                 .frame(minHeight: 22 * scale)
@@ -215,15 +216,15 @@ struct ContentView: View {
         Group {
             if practice.notes.isEmpty {
                 VStack(spacing: 12) {
-                    Text("准备练习").font(.editorial(size: 24 * scale))
-                    Text("每组 20 个音").font(.editorial(size: 13 * scale)).foregroundStyle(muted)
+                    Text(L("准备练习")).font(.editorial(size: 24 * scale))
+                    Text(L("每组 20 个音")).font(.editorial(size: 13 * scale)).foregroundStyle(muted)
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if practice.mode == .names {
                 VStack(spacing: 8) {
-                    Text(practice.completed ? "完成" : "弹出这个音").font(.editorial(size: 13 * scale)).foregroundStyle(muted)
-                    Text((practice.target ?? practice.notes.last)?.name ?? "—")
+                    Text(L(practice.completed ? L("完成") : L("弹出这个音"))).font(.editorial(size: 13 * scale)).foregroundStyle(muted)
+                    Text(L((practice.target ?? practice.notes.last)?.name ?? "—"))
                         .font(.editorial(size: 72 * scale)).tracking(-1.44 * scale).minimumScaleFactor(0.5)
-                    Text("第 \(practice.currentString) 弦").font(.editorial(size: 14 * scale)).foregroundStyle(muted)
+                    Text(L("第 \(practice.currentString) 弦")).font(.editorial(size: 14 * scale)).foregroundStyle(muted)
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 StaffView(notes: practice.notes, current: practice.index, showNames: practice.showNames)
@@ -232,28 +233,29 @@ struct ContentView: View {
     }
     private var summary: some View {
         VStack(spacing: 24) {
-            Text("练习结束").font(.editorial(size: 24 * scale, weight: .medium))
-            Text("已完成 \(practice.answered) 个音，学习记录已更新。") .foregroundStyle(muted)
+            Text(L("练习结束")).font(.editorial(size: 24 * scale, weight: .medium))
+            Text(L("已完成 \(practice.answered) 个音，学习记录已更新。")) .foregroundStyle(muted)
             HStack(spacing: 36) {
-                metric(practice.accuracy, caption: "首次正确率")
-                metric(practice.averageTime, caption: "平均找音时间")
+                metric(practice.accuracy, caption: L("首次正确率"))
+                metric(practice.averageTime, caption: L("平均找音时间"))
             }
-            Text("用过提示或跳过的音会优先安排复习。") .font(.editorial(size: 12 * scale)).foregroundStyle(muted)
-            Button("完成") { practice.showSummary = false }.buttonStyle(EditorialButtonStyle(prominent: true)).keyboardShortcut(.defaultAction)
+            Text(L("用过提示或跳过的音会优先安排复习。")) .font(.editorial(size: 12 * scale)).foregroundStyle(muted)
+            Button(L("完成")) { practice.showSummary = false }.buttonStyle(EditorialButtonStyle(prominent: true)).keyboardShortcut(.defaultAction)
         }.padding(42).frame(width: 480 * scale).foregroundStyle(ink).background(palette.background)
     }
-    private func eyebrow(_ text: String) -> some View { Text(text).font(.editorial(size: 12 * scale, weight: .medium)).foregroundStyle(muted) }
+    private func eyebrow(_ text: String) -> some View { Text(L(text)).font(.editorial(size: 12 * scale, weight: .medium)).foregroundStyle(muted) }
     private func metric(_ value: String, caption: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(value).font(.editorial(size: 24 * scale, weight: .regular)).monospacedDigit()
-            Text(caption).font(.editorial(size: 12 * scale)).foregroundStyle(muted)
+            Text(L(value)).font(.editorial(size: 24 * scale, weight: .regular)).monospacedDigit()
+            Text(L(caption)).font(.editorial(size: 12 * scale)).foregroundStyle(muted)
         }
     }
 }
 
 
 /// AppKit pop-up menus provide standard selection, keyboard navigation and dismissal.
-struct ScaledPicker<Value: Hashable>: View {
+struct ScaledPicker<Value: Hashable>: View, Localizable {
+    @Environment(\.appLanguage) var language
     var title: String? = nil
     var accessibilityName: String? = nil
     var controlWidth: CGFloat? = nil
@@ -263,16 +265,17 @@ struct ScaledPicker<Value: Hashable>: View {
     @Environment(\.interfaceScale) private var scale
     var body: some View {
         HStack(spacing: 8) {
-            if let title { Text(title).fixedSize() }
+            if let title { Text(L(title)).fixedSize() }
             NativeChoicePicker(selection: $selection, options: options, label: label, accessibilityTitle: accessibilityName ?? title ?? label(selection), controlWidth: controlWidth)
                 .fixedSize()
-                .accessibilityLabel(title ?? label(selection))
+                .accessibilityLabel(L(title ?? label(selection)))
         }
         .font(.editorial(size: 12 * scale))
     }
 }
 
-struct OpenSettingsButton: View {
+struct OpenSettingsButton: View, Localizable {
+    @Environment(\.appLanguage) var language
     var body: some View {
         Group {
             if #available(macOS 14.0, *) {
@@ -282,6 +285,6 @@ struct OpenSettingsButton: View {
                     Image(systemName: "gearshape")
                 }
             }
-        }.accessibilityLabel("设置").help("设置（⌘,）")
+        }.accessibilityLabel(L("设置")).help(L("设置（⌘,）"))
     }
 }

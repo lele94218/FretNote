@@ -55,6 +55,7 @@ final class LearningModeTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let appearance = AppearancePreferences(defaults: defaults)
+        appearance.language = ProcessInfo.processInfo.environment["FRETNOTE_SNAPSHOT_LANGUAGE"] == "en" ? .english : .chinese
         for (suffix, width, height, fontScale) in [("", 1160.0, 820.0, 1.25), ("-large-text", 1040.0, 740.0, 1.75)] {
         for (name, shell, arpeggio, theme) in [("chord", false, false, AppTheme.light), ("shell", true, false, .dark), ("arpeggio", false, true, .light)] {
             for exercise in [false, true] {
@@ -68,7 +69,8 @@ final class LearningModeTests: XCTestCase {
                 drill.start(catalog: Array(store.catalog.prefix(1)), arpeggio: arpeggio, name: "A", shell: shell)
             }
             let view = LearningView(store: store, practice: practice, audio: audio, drill: drill)
-                .environmentObject(appearance).environment(\.interfaceScale, fontScale)
+                .environmentObject(appearance)
+                .environment(\.appLanguage, ProcessInfo.processInfo.environment["FRETNOTE_SNAPSHOT_LANGUAGE"] == "en" ? .english : .chinese).environment(\.interfaceScale, fontScale)
                 .preferredColorScheme(theme.colorScheme).frame(width: width, height: height)
             let host = NSHostingView(rootView: view)
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: width, height: height), styleMask: [.borderless], backing: .buffered, defer: false)

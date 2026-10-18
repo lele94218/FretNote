@@ -19,6 +19,8 @@ Actual app views rendered with demo data; no personal learning records are shown
 
 ![Chord learning with shared exercise navigation](docs/screenshots/chord-learning-light.jpg)
 
+![English interface](docs/screenshots/chord-learning-english.jpg)
+
 ### Arpeggio practice
 
 ![Arpeggio learning with degrees, note names and string positions](docs/screenshots/arpeggio-learning-light.jpg)
@@ -43,7 +45,9 @@ Actual app views rendered with demo data; no personal learning records are shown
 
 ![Learning history with cumulative statistics and session results](docs/screenshots/learning-history.jpg)
 
-The main practice screens borrow the text-led navigation, restrained monochrome palette and editorial grid of [SSENSE](https://www.ssense.com/en-us). Native macOS menus, adjustable text, proportional diagrams and a single-window layout remain. Latin text and numerals use bundled [Inter 4.1](https://github.com/rsms/inter/releases/tag/v4.1), with PingFang SC for Chinese. Inter is an open-source alternative, not SSENSE’s custom Favorit. Music notation continues to use Bravura.
+The main practice screens borrow the text-led navigation, restrained monochrome palette and editorial grid of [SSENSE](https://www.ssense.com/en-us). Native macOS menus, adjustable text, proportional diagrams and a single-window layout remain. Local builds can use user-supplied Favorit SSENSE Inter / Regular, with PingFang SC for Chinese. Public builds bundle OFL-licensed Inter as the fallback; proprietary SSENSE fonts are not included in this repository. Music notation continues to use Bravura.
+
+Choose **Settings → Appearance → Language** to switch between **简体中文** and **English**. The choice is saved and applies immediately to app controls, practice feedback and existing history without resetting the exercise.
 
 ## Features
 
@@ -169,6 +173,6 @@ Future directions include real-guitar regression samples, separate sight-reading
 
 ## License
 
-Inter is distributed under the [SIL Open Font License 1.1](Sources/FretNoteApp/Resources/Inter-LICENSE.txt).
+Inter is distributed under the [SIL Open Font License 1.1](Sources/FretNoteApp/Resources/Inter-LICENSE.txt). Locally supplied commercial fonts retain their original terms and must not be included in public packages.
 
 Project code is released under the [MIT License](LICENSE). The bundled Bravura font and associated resources retain their upstream license; see [Bravura-LICENSE.txt](Sources/FretNoteApp/Resources/Bravura-LICENSE.txt).
