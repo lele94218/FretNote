@@ -43,7 +43,7 @@ Actual app views rendered with demo data; no personal learning records are shown
 
 ![Learning history with cumulative statistics and session results](docs/screenshots/learning-history.jpg)
 
-The main practice screens borrow the text-led navigation, restrained monochrome palette and editorial grid of [SSENSE](https://www.ssense.com/en-us). Native macOS menus, adjustable text, proportional diagrams and a single-window layout remain.
+The main practice screens borrow the text-led navigation, restrained monochrome palette and editorial grid of [SSENSE](https://www.ssense.com/en-us). Native macOS menus, adjustable text, proportional diagrams and a single-window layout remain. Latin text and numerals use bundled [Inter 4.1](https://github.com/rsms/inter/releases/tag/v4.1), with PingFang SC for Chinese. Inter is an open-source alternative, not SSENSE’s custom Favorit. Music notation continues to use Bravura.
 
 ## Features
 
@@ -168,5 +168,7 @@ Issues and pull requests are welcome. Run `swift test` before submitting changes
 Future directions include real-guitar regression samples, separate sight-reading proficiency, rhythm exercises, and expanded notation support.
 
 ## License
+
+Inter is distributed under the [SIL Open Font License 1.1](Sources/FretNoteApp/Resources/Inter-LICENSE.txt).
 
 Project code is released under the [MIT License](LICENSE). The bundled Bravura font and associated resources retain their upstream license; see [Bravura-LICENSE.txt](Sources/FretNoteApp/Resources/Bravura-LICENSE.txt).

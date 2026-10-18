@@ -32,10 +32,10 @@ struct AppSettingsView: View {
         }
         .padding(20)
         .frame(width: 620, height: 580)
-        .font(.system(size: 13 * scale))
+        .font(.editorial(size: 13 * scale))
         .background(palette.background)
     }
-    private func eyebrow(_ text: String) -> some View { Text(text).font(.system(size: 12 * scale, weight: .medium)).foregroundStyle(muted) }
+    private func eyebrow(_ text: String) -> some View { Text(text).font(.editorial(size: 12 * scale, weight: .medium)).foregroundStyle(muted) }
     private var appearanceControls: some View {
         VStack(alignment: .leading, spacing: 12) {
             ScaledPicker(title: "外观", selection: $appearance.theme, options: AppTheme.allCases) { $0.title }
@@ -50,7 +50,7 @@ struct AppSettingsView: View {
                 .accessibilityLabel("界面字号")
                 .accessibilityValue("\(Int((appearance.fontScale * 100).rounded()))%")
             rule.frame(height: 1)
-        }.font(.system(size: 12 * scale)).controlSize(.large)
+        }.font(.editorial(size: 12 * scale)).controlSize(.large)
     }
     private var inputPanel: some View {
         VStack(alignment: .leading, spacing: 15) {
@@ -76,31 +76,31 @@ struct AppSettingsView: View {
                     }
                 }.frame(height: 3)
                 Text(audio.level > 0 ? String(format: "%.0f dB", 20 * log10(audio.level)) : "— dB")
-                    .font(.system(size: 12 * scale, design: .monospaced)).foregroundStyle(muted).frame(width: 60 * scale)
+                    .font(.editorial(size: 12 * scale, design: .monospaced)).foregroundStyle(muted).frame(width: 60 * scale)
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("输入电平")
             .accessibilityValue(audio.level > 0 ? String(format: "%.0f 分贝", 20 * log10(audio.level)) : "无信号")
             if audio.level > 0.8 {
-                Text("输入电平过高，请降低声卡增益。").font(.system(size: 12 * scale, weight: .medium))
+                Text("输入电平过高，请降低声卡增益。").font(.editorial(size: 12 * scale, weight: .medium))
             }
             HStack(alignment: .firstTextBaseline) {
-                Text(detectedName).font(.system(size: 24 * scale, weight: .regular)).foregroundStyle(ink)
+                Text(detectedName).font(.editorial(size: 24 * scale, weight: .regular)).foregroundStyle(ink)
                 Spacer()
                 if let reading = audio.reading {
-                    Text(String(format: "%.1f Hz  %+.0f ¢", reading.frequency, reading.cents)).font(.system(size: 12 * scale, design: .monospaced)).foregroundStyle(muted)
-                } else { Text(audio.running ? "等待清晰的单音" : "连接声卡，选择吉他通道").font(.system(size: 12 * scale)).foregroundStyle(muted) }
+                    Text(String(format: "%.1f Hz  %+.0f ¢", reading.frequency, reading.cents)).font(.editorial(size: 12 * scale, design: .monospaced)).foregroundStyle(muted)
+                } else { Text(audio.running ? "等待清晰的单音" : "连接声卡，选择吉他通道").font(.editorial(size: 12 * scale)).foregroundStyle(muted) }
             }
             HStack {
-                Text("噪声门").font(.system(size: 12 * scale)).foregroundStyle(muted)
+                Text("噪声门").font(.editorial(size: 12 * scale)).foregroundStyle(muted)
                 Slider(value: $audio.gateDB, in: -65 ... -25, step: 1).accessibilityLabel("噪声门").accessibilityValue("\(Int(audio.gateDB)) 分贝").disabled(audio.running || audio.starting)
-                Text("\(Int(audio.gateDB)) dB").font(.system(size: 12 * scale, design: .monospaced)).foregroundStyle(muted)
+                Text("\(Int(audio.gateDB)) dB").font(.editorial(size: 12 * scale, design: .monospaced)).foregroundStyle(muted)
             }
             Text("使用干净音色；重复同音时，轻闷弦再拨。噪声门在停止监听后调整。")
-                .font(.system(size: 12 * scale)).foregroundStyle(muted).lineSpacing(3)
+                .font(.editorial(size: 12 * scale)).foregroundStyle(muted).lineSpacing(3)
             if let error = audio.error {
-                Text(error).font(.system(size: 12 * scale)).foregroundStyle(ink).lineLimit(2).help(error).textSelection(.enabled)
-                if AVCaptureDevice.authorizationStatus(for: .audio) == .denied { Button("打开麦克风权限设置") { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")!) }.font(.system(size: 12 * scale)) }
+                Text(error).font(.editorial(size: 12 * scale)).foregroundStyle(ink).lineLimit(2).help(error).textSelection(.enabled)
+                if AVCaptureDevice.authorizationStatus(for: .audio) == .denied { Button("打开麦克风权限设置") { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")!) }.font(.editorial(size: 12 * scale)) }
             }
         }.buttonStyle(.bordered).controlSize(.large)
     }

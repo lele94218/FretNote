@@ -31,7 +31,7 @@ struct LearningView: View {
                 HStack {
                     Button { appearance.sidebarVisible.toggle() } label: { Image(systemName: "sidebar.left") }
                         .accessibilityLabel("显示或隐藏侧栏")
-                    Text(store.arpeggio ? "琶音练习" : "和弦练习").font(.system(size: 20 * scale, weight: .regular))
+                    Text(store.arpeggio ? "琶音练习" : "和弦练习").font(.editorial(size: 20 * scale, weight: .regular))
                     Spacer()
                     OpenSettingsButton()
                 }.buttonStyle(EditorialButtonStyle())
@@ -42,7 +42,7 @@ struct LearningView: View {
                 }
                 HStack {
                     Text(LearningShapes.roots[store.root] + store.quality.suffix)
-                        .font(.system(size: 24 * scale, weight: .regular))
+                        .font(.editorial(size: 24 * scale, weight: .regular)).tracking(-0.48 * scale)
                     Spacer()
                     if !drill.practicing {
                         Button("开始练习") { drill.practicing = true; startPractice() }
@@ -52,12 +52,12 @@ struct LearningView: View {
                 if drill.practicing { exercise }
                 else {
                 Text(store.arpeggio ? "依次弹奏 · 各种路径按品位排列" : "三个音一起响 · 各弦组与排列按品位展示")
-                    .font(.system(size: 12 * scale)).foregroundStyle(palette.muted)
+                    .font(.editorial(size: 12 * scale)).foregroundStyle(palette.muted)
                 gallery
                 }
             }.padding(20).frame(minWidth: 600)
         }
-        .font(.system(size: 13 * scale))
+        .font(.editorial(size: 13 * scale))
         .foregroundStyle(palette.ink).background(palette.background).tint(palette.ink)
         .onChange(of: store.root) { _ in drill.clear() }
         .onChange(of: store.quality) { _ in drill.clear() }
@@ -80,7 +80,7 @@ struct LearningView: View {
             Spacer(minLength: 8)
             Button("学习记录") { showHistory = true }.buttonStyle(EditorialButtonStyle())
             Text(drill.practicing ? (store.arpeggio ? "逐音判定 · 注意止音" : "多音判定 · 使用干净音色") : "学习模式 · 无需输入")
-                .font(.system(size: 12 * scale)).foregroundStyle(palette.muted)
+                .font(.editorial(size: 12 * scale)).foregroundStyle(palette.muted)
         }.padding(20)
     }
     private func modeLink(_ title: String, practicing: Bool) -> some View {
@@ -89,7 +89,7 @@ struct LearningView: View {
             if practicing { drill.practicing = true }
             else { drill.reset(records: practice, audio: audio) }
         } label: {
-            Text(title).font(.system(size: 13 * scale))
+            Text(title).font(.editorial(size: 13 * scale))
                 .foregroundStyle(selected ? palette.ink : palette.muted)
                 .underline(selected, color: palette.ink)
                 .padding(.vertical, 6)
@@ -111,40 +111,40 @@ struct LearningView: View {
         VStack(alignment: .leading, spacing: 12) {
             if !store.arpeggio {
                 Text("多音判定（试用）· 先止音，再拨响三个音并保持延音")
-                    .font(.system(size: 11 * scale)).foregroundStyle(palette.muted)
+                    .font(.editorial(size: 11 * scale)).foregroundStyle(palette.muted)
             }
             if let question = drill.question {
                 Text(question.shape.tones.map(\.degree).joined(separator: store.arpeggio ? " → " : " – ") + " · 根音 \(question.shape.root.string) 弦")
-                    .font(.system(size: 16 * scale))
+                    .font(.editorial(size: 16 * scale))
                 Text(question.label + " · 音区 " + question.shape.tones.map { $0.name + String($0.note.midi / 12 - 1) }.joined(separator: " / "))
-                    .font(.system(size: 12 * scale)).foregroundStyle(palette.muted)
+                    .font(.editorial(size: 12 * scale)).foregroundStyle(palette.muted)
                 FretboardView(lower: question.shape.lower, upper: max(question.shape.lower + 1, question.shape.upper),
                               learningTones: drill.revealed || drill.completed ? question.shape.tones : [])
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 if store.arpeggio {
                     Text("三音进度 \(drill.noteIndex) / 3")
-                        .font(.system(size: 13 * scale)).monospacedDigit()
+                        .font(.editorial(size: 13 * scale)).monospacedDigit()
                 }
-                Text(drill.feedback).font(.system(size: 13 * scale))
+                Text(drill.feedback).font(.editorial(size: 13 * scale))
                 Text("第 \(drill.questionIndex + 1) / \(drill.questions.count) 题 · 首次正确 \(drill.session?.accuracy ?? "—")")
-                    .font(.system(size: 12 * scale)).foregroundStyle(palette.muted)
+                    .font(.editorial(size: 12 * scale)).foregroundStyle(palette.muted)
             } else {
                 Text(store.arpeggio ? "依次弹出三个目标音。App 检查音高、八度和顺序。" : "三个目标音一起响。App 检查实际音高组合，不将三个分离的单音累加。")
-                    .font(.system(size: 14 * scale))
+                    .font(.editorial(size: 14 * scale))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             }
             if let error = audio.error ?? practice.persistenceError {
-                Text(error).font(.system(size: 11 * scale)).foregroundStyle(palette.muted)
+                Text(error).font(.editorial(size: 11 * scale)).foregroundStyle(palette.muted)
             }
             if audio.running && !store.arpeggio && drill.active && !drill.completed {
                 Text(audio.chordReading.map { "听到 " + $0.midis.map { GuitarNote.names[$0 % 12] + String($0 / 12 - 1) }.joined(separator: " · ") } ?? "等待清晰的三个音…")
-                    .font(.system(size: 11 * scale)).foregroundStyle(palette.muted)
+                    .font(.editorial(size: 11 * scale)).foregroundStyle(palette.muted)
             }
             Divider()
             ViewThatFits(in: .horizontal) {
                 HStack { exerciseButtons }
                 VStack(alignment: .leading, spacing: 8) { exerciseButtons }
-            }.buttonStyle(EditorialButtonStyle()).font(.system(size: 12 * scale))
+            }.buttonStyle(EditorialButtonStyle()).font(.editorial(size: 12 * scale))
         }
     }
     @ViewBuilder private var exerciseButtons: some View {
@@ -179,9 +179,9 @@ struct LearningView: View {
                                 Text(example.label)
                                 Spacer()
                                 Text(example.shape.tones.map(\.degree).joined(separator: store.arpeggio ? "→" : "–"))
-                            }.font(.system(size: 12 * scale, weight: .medium))
+                            }.font(.editorial(size: 12 * scale, weight: .medium))
                             Text("根音 \(example.shape.root.string) 弦 · " + example.shape.tones.map(\.name).joined(separator: " · "))
-                                .font(.system(size: 11 * scale)).foregroundStyle(palette.muted)
+                                .font(.editorial(size: 11 * scale)).foregroundStyle(palette.muted)
                             FretboardView(lower: example.shape.lower, upper: max(example.shape.lower + 1, example.shape.upper), learningTones: example.shape.tones, showsCaption: false)
                                 .frame(height: diagramHeight)
                                 .environment(\.interfaceScale, min(scale, 1.25))
@@ -196,7 +196,7 @@ struct LearningView: View {
                         .foregroundStyle(palette.muted).monospacedDigit()
                     Button("下一页") { store.position = min(pages - 1, page + 1) }.disabled(page + 1 >= pages)
                     Spacer(minLength: 0)
-                }.font(.system(size: 12 * scale)).buttonStyle(EditorialButtonStyle())
+                }.font(.editorial(size: 12 * scale)).buttonStyle(EditorialButtonStyle())
             }
         }
     }
@@ -217,7 +217,7 @@ struct ExerciseNavigation: View {
     private var palette: AppPalette { AppPalette(scheme: scheme, contrast: contrast) }
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("FRETNOTE").font(.system(size: 12 * scale, weight: .regular)).tracking(1.5).foregroundStyle(palette.ink)
+            Text("FRETNOTE").font(.editorial(size: 12 * scale, weight: .regular)).tracking(0.25 * scale).foregroundStyle(palette.ink)
             ForEach(PracticeMode.allCases) { mode in
                 item(mode.rawValue, selected: !practice.learning && practice.mode == mode) {
                     drill.reset(records: practice, audio: audio)
@@ -241,7 +241,7 @@ struct ExerciseNavigation: View {
     private func item(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack {
-                Text(title).font(.system(size: 14 * scale, weight: .regular)).underline(selected, color: palette.ink)
+                Text(title).font(.editorial(size: 14 * scale, weight: .regular)).underline(selected, color: palette.ink)
                 Spacer()
             }.padding(.vertical, 5)
                 .foregroundStyle(selected ? palette.ink : palette.muted)

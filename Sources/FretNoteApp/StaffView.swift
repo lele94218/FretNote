@@ -58,7 +58,7 @@ struct StaffView: View {
                     let y = bottom - CGFloat(note.staffStep) * 7
                     let color = i < current ? palette.muted : ink
                     if i == current {
-                        context.draw(Text("↓").font(.system(size: 18)).foregroundColor(ink), at: CGPoint(x: x, y: 12))
+                        context.draw(Text("↓").font(.editorial(size: 18)).foregroundColor(ink), at: CGPoint(x: x, y: 12))
                     }
                     if note.staffStep < 0 {
                         for step in stride(from: -2, through: note.staffStep, by: -2) {
@@ -82,7 +82,7 @@ struct StaffView: View {
                     }
                     accidentals[note.staffStep] = !note.isNatural
                     if showNames {
-                        context.draw(Text(note.name).font(.system(size: 15, weight: .medium)).foregroundColor(color),
+                        context.draw(Text(note.name).font(.editorial(size: 15, weight: .medium)).foregroundColor(color),
                                      at: CGPoint(x: x, y: labelY))
                     }
                 }
@@ -135,7 +135,7 @@ struct FretboardView: View {
                 }
                 VStack(alignment: .leading, spacing: 5) { rangeLabel; hintLabel }
             }
-            .font(.system(size: 12 * scale)).foregroundStyle(palette.muted)
+            .font(.editorial(size: 12 * scale)).foregroundStyle(palette.muted)
             }
             FixedDiagram(size: CGSize(width: (right + 14) * scale, height: 144 * scale)) {
                 Canvas { context, _ in
@@ -160,7 +160,7 @@ struct FretboardView: View {
                         let left = fretLeft(fret)
                         let center = left + fretWidth(fret) / 2
                         let inRange = (lower...upper).contains(fret)
-                        context.draw(Text(fret == 0 ? "空弦" : "\(fret)").font(.system(size: 11))
+                        context.draw(Text(fret == 0 ? "空弦" : "\(fret)").font(.editorial(size: 11))
                             .foregroundColor(inRange ? ink : palette.muted), at: CGPoint(x: center, y: 132))
                         let x = left + fretWidth(fret)
                         let taper = max(0, (x - neckLeft) / (right - neckLeft)) * 4
@@ -210,7 +210,7 @@ struct FretboardView: View {
                         let marker = Path(roundedRect: CGRect(x: x - 10, y: y - 6.5, width: 20, height: 13), cornerRadius: 5)
                         context.fill(marker, with: .color(.white))
                         context.stroke(marker, with: .color(.black), lineWidth: tone.degree == "1" ? 1.5 : 0.7)
-                        context.draw(Text(tone.degree).font(.system(size: 9, weight: .bold)).foregroundColor(.black), at: CGPoint(x: x, y: y))
+                        context.draw(Text(tone.degree).font(.editorial(size: 9, weight: .bold)).foregroundColor(.black), at: CGPoint(x: x, y: y))
                     }
                     if let note = highlightedNote, (firstFret...lastFret).contains(note.fret), (1...6).contains(note.string) {
                         let x = fretLeft(note.fret) + fretWidth(note.fret) / 2

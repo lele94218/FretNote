@@ -42,7 +42,7 @@ struct NativeChoicePicker<Value: Hashable>: NSViewRepresentable {
             button.select(nil)
             button.title = "无可用选项"
         }
-        let font = NSFont.systemFont(ofSize: 12 * scale)
+        let font = AppTypography.nativeFont(size: 12 * scale)
         button.font = font
         button.menu?.font = font
         button.menu?.minimumWidth = 112

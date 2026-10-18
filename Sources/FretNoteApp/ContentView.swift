@@ -51,7 +51,7 @@ struct ContentView: View {
                         Text(audio.reading.map { "听到 \(GuitarNote.names[($0.midi % 12 + 12) % 12])\($0.midi / 12 - 1)" } ?? "等待清晰的单音")
                         Spacer()
                         Text(audio.level > 0.8 ? "电平过高，请降低声卡增益" : (audio.level > 0 ? String(format: "输入 %.0f dB", 20 * log10(audio.level)) : "暂无输入信号"))
-                    }.font(.system(size: 12 * scale)).foregroundStyle(muted)
+                    }.font(.editorial(size: 12 * scale)).foregroundStyle(muted)
                         .padding(.horizontal, 24).padding(.bottom, 12)
                 }
                 rule.frame(height: 1)
@@ -65,13 +65,13 @@ struct ContentView: View {
                         Button { showError = true } label: { Label("查看问题", systemImage: "exclamationmark.circle") }
                     }
                     Button("学习记录") { showProgress = true }
-                }.font(.system(size: 12 * scale)).buttonStyle(EditorialButtonStyle())
+                }.font(.editorial(size: 12 * scale)).buttonStyle(EditorialButtonStyle())
                     .padding(.horizontal, 20).padding(.vertical, 12)
             }.frame(minWidth: 600)
         }
         .background(palette.background)
         .foregroundStyle(ink)
-        .font(.system(size: 13 * scale))
+        .font(.editorial(size: 13 * scale))
         .tint(ink)
         .onChange(of: practice.feedback) { message in
             guard NSWorkspace.shared.isVoiceOverEnabled else { return }
@@ -132,11 +132,11 @@ struct ContentView: View {
                 if practice.mode == .melody {
                     ScaledPicker(title: "旋律长度", selection: $practice.melodyLength, options: Array(3...5)) { "\($0) 个音" }
                 }
-            }.font(.system(size: 12 * scale)).disabled(practice.active)
+            }.font(.editorial(size: 12 * scale)).disabled(practice.active)
             Spacer()
             Text("单音 · 标准调弦")
                 .help("单音练习，不考核节奏。请按指定弦与把位弹奏；音高识别无法验证实际弦位。")
-                .font(.system(size: 12 * scale)).foregroundStyle(muted).lineSpacing(5)
+                .font(.editorial(size: 12 * scale)).foregroundStyle(muted).lineSpacing(5)
         }.padding(20)
     }
     private var header: some View {
@@ -144,7 +144,7 @@ struct ContentView: View {
             Button { appearance.sidebarVisible.toggle() } label: { Image(systemName: "sidebar.left") }
                 .accessibilityLabel(appearance.sidebarVisible ? "隐藏侧栏" : "显示侧栏")
                 .help("显示或隐藏侧栏（⌃⌘S）")
-            Text(practice.mode.rawValue).font(.system(size: 20 * scale, weight: .regular))
+            Text(practice.mode.rawValue).font(.editorial(size: 20 * scale, weight: .regular))
             Spacer()
             OpenSettingsButton()
         }.buttonStyle(EditorialButtonStyle())
@@ -156,7 +156,7 @@ struct ContentView: View {
                 listeningControls
                 HStack { Spacer(); practiceControls }
             }
-        }.font(.system(size: 12 * scale)).controlSize(.large).buttonStyle(EditorialButtonStyle())
+        }.font(.editorial(size: 12 * scale)).controlSize(.large).buttonStyle(EditorialButtonStyle())
     }
     private var listeningControls: some View {
         HStack(spacing: 10) {
@@ -185,7 +185,7 @@ struct ContentView: View {
                 Text(practice.mode == .names ? "\(practice.notes.isEmpty ? practice.selectedStringLabel : "第 \(practice.currentString) 弦") · 全弦找音" : "第 \(practice.lowerFret)–\(practice.upperFret) 品 · 六根弦")
                 Spacer()
                 Text("\(practice.answered) / 20 音").monospacedDigit()
-            }.font(.system(size: 12 * scale)).foregroundStyle(muted)
+            }.font(.editorial(size: 12 * scale)).foregroundStyle(muted)
             GeometryReader { space in
                 let showsBoard = practice.mode != .names || practice.hint
                 let gap: CGFloat = 12
@@ -206,7 +206,7 @@ struct ContentView: View {
                     Image(systemName: practice.feedbackKind > 0 ? "checkmark" : "xmark")
                 }
                 Text(practice.notes.isEmpty ? "开启输入后，点击开始练习。" : practice.feedback)
-            }.font(.system(size: 13 * scale))
+            }.font(.editorial(size: 13 * scale))
                 .foregroundStyle(practice.feedbackKind == 0 ? muted : ink)
                 .frame(minHeight: 22 * scale)
         }
@@ -215,15 +215,15 @@ struct ContentView: View {
         Group {
             if practice.notes.isEmpty {
                 VStack(spacing: 12) {
-                    Text("准备练习").font(.system(size: 24 * scale))
-                    Text("每组 20 个音").font(.system(size: 13 * scale)).foregroundStyle(muted)
+                    Text("准备练习").font(.editorial(size: 24 * scale))
+                    Text("每组 20 个音").font(.editorial(size: 13 * scale)).foregroundStyle(muted)
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if practice.mode == .names {
                 VStack(spacing: 8) {
-                    Text(practice.completed ? "完成" : "弹出这个音").font(.system(size: 13 * scale)).foregroundStyle(muted)
+                    Text(practice.completed ? "完成" : "弹出这个音").font(.editorial(size: 13 * scale)).foregroundStyle(muted)
                     Text((practice.target ?? practice.notes.last)?.name ?? "—")
-                        .font(.system(size: 72 * scale)).minimumScaleFactor(0.5)
-                    Text("第 \(practice.currentString) 弦").font(.system(size: 14 * scale)).foregroundStyle(muted)
+                        .font(.editorial(size: 72 * scale)).tracking(-1.44 * scale).minimumScaleFactor(0.5)
+                    Text("第 \(practice.currentString) 弦").font(.editorial(size: 14 * scale)).foregroundStyle(muted)
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 StaffView(notes: practice.notes, current: practice.index, showNames: practice.showNames)
@@ -232,21 +232,21 @@ struct ContentView: View {
     }
     private var summary: some View {
         VStack(spacing: 24) {
-            Text("练习结束").font(.system(size: 24 * scale, weight: .medium))
+            Text("练习结束").font(.editorial(size: 24 * scale, weight: .medium))
             Text("已完成 \(practice.answered) 个音，学习记录已更新。") .foregroundStyle(muted)
             HStack(spacing: 36) {
                 metric(practice.accuracy, caption: "首次正确率")
                 metric(practice.averageTime, caption: "平均找音时间")
             }
-            Text("用过提示或跳过的音会优先安排复习。") .font(.system(size: 12 * scale)).foregroundStyle(muted)
+            Text("用过提示或跳过的音会优先安排复习。") .font(.editorial(size: 12 * scale)).foregroundStyle(muted)
             Button("完成") { practice.showSummary = false }.buttonStyle(EditorialButtonStyle(prominent: true)).keyboardShortcut(.defaultAction)
         }.padding(42).frame(width: 480 * scale).foregroundStyle(ink).background(palette.background)
     }
-    private func eyebrow(_ text: String) -> some View { Text(text).font(.system(size: 12 * scale, weight: .medium)).foregroundStyle(muted) }
+    private func eyebrow(_ text: String) -> some View { Text(text).font(.editorial(size: 12 * scale, weight: .medium)).foregroundStyle(muted) }
     private func metric(_ value: String, caption: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(value).font(.system(size: 24 * scale, weight: .regular)).monospacedDigit()
-            Text(caption).font(.system(size: 12 * scale)).foregroundStyle(muted)
+            Text(value).font(.editorial(size: 24 * scale, weight: .regular)).monospacedDigit()
+            Text(caption).font(.editorial(size: 12 * scale)).foregroundStyle(muted)
         }
     }
 }
@@ -268,7 +268,7 @@ struct ScaledPicker<Value: Hashable>: View {
                 .fixedSize()
                 .accessibilityLabel(title ?? label(selection))
         }
-        .font(.system(size: 12 * scale))
+        .font(.editorial(size: 12 * scale))
     }
 }
 
