@@ -4,7 +4,7 @@ import FretNoteCore
 struct FretboardCamera: Equatable {
     var center: CGFloat
     var width: CGFloat
-    static let overview = FretboardCamera(center: 590, width: 1900)
+    static let overview = FretboardCamera(center: 275, width: 1290)
     static func following(_ notes: [GuitarNote], index: Int) -> FretboardCamera {
         guard notes.indices.contains(index) else { return .overview }
         let upcoming = notes[index..<min(notes.count, index + 3)]

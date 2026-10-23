@@ -43,6 +43,17 @@ final class FretboardCameraTests: XCTestCase {
         }
     }
 
+    func testTracedNeckIsBundledAndOverviewExcludesBody() {
+        XCTAssertFalse(NeckArtwork.layers.isEmpty)
+        let bounds = NeckArtwork.outline.boundingRect
+        XCTAssertFalse(bounds.isEmpty)
+        let camera = FretboardCamera.overview
+        XCTAssertLessThan(camera.center - camera.width / 2, bounds.minX)
+        XCTAssertGreaterThan(camera.center + camera.width / 2, bounds.maxX)
+        XCTAssertLessThan(camera.center + camera.width / 2, GuitarGeometry.scaleLength)
+        XCTAssertLessThan(bounds.maxX, GuitarGeometry.fretX(21) + 30)
+    }
+
     @MainActor
     func testRenderCamera() async throws {
         guard let path = ProcessInfo.processInfo.environment["FRETNOTE_CAMERA_SNAPSHOTS"] else { return }
