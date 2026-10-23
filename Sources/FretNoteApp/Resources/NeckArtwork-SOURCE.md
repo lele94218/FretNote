@@ -45,3 +45,10 @@ reconstructs continuous cubic curves. The native neck clipping outline also uses
 cubic curves. This does not blur a bitmap at runtime or move note/fret coordinates.
 To change smoothing settings, first regenerate the traces rather than repeatedly
 smoothing already processed resources.
+
+## Circular position markers
+
+Photographic inlays are removed before tracing using adjacent wood samples. The
+renderer draws exact 12-unit-diameter circles at frets 3, 5, 7, 9, 12, 15, 17, 19,
+and 21, with two circles at the twelfth fret. These circles bypass the tracing
+and smoothing passes and retain their proportions at every camera scale.

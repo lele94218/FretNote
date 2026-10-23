@@ -32,6 +32,13 @@ struct GuitarInstrumentCanvas: View, Animatable {
                 artwork.fill(layer.path, with: .color(layer.color))
             }
         }
+        // Inlays are geometric circles, never irregular photo-traced polygons.
+        for fret in [3, 5, 7, 9, 12, 15, 17, 19, 21] {
+            for y: CGFloat in fret == 12 ? [-24, 24] : [0] {
+                let circle = CGRect(x: GuitarGeometry.noteX(fret) - 6, y: y - 6, width: 12, height: 12)
+                context.fill(Path(ellipseIn: circle), with: .color(Color(red: 0.87, green: 0.84, blue: 0.72)))
+            }
+        }
         // Metallic posts sit in the photographed tuning holes.
         for string in 1...6 {
             let post = NeckArtwork.tuningPost(string)

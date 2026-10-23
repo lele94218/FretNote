@@ -26,6 +26,22 @@ for y in range(42, 414):
     for x in range(1016, 1110):
         if min(source.getpixel((x, y))) < 225:
             image.putpixel((x, y), tone)
+# Replace photographic inlays with neighboring wood before tracing. The app
+# draws these markers as exact circles, independently of the photo contours.
+inlay_rows = [559, 670, 775, 875, 969, 1058, 1142, 1221, 1296, 1366,
+              1433, 1496, 1555, 1612, 1665, 1714, 1762, 1807, 1849, 1889, 1926, 1962]
+for fret in [3, 5, 7, 9, 12, 15, 17, 19, 21]:
+    cy = round((inlay_rows[fret - 1] + inlay_rows[fret]) / 2)
+    for cx in ([932, 1014] if fret == 12 else [973]):
+        bright = [(x, y) for y in range(max(cy - 16, inlay_rows[fret - 1] + 7), min(cy + 17, inlay_rows[fret] - 6)) for x in range(cx - 16, cx + 17)
+                  if all(a > b for a, b in zip(source.getpixel((x, y)), (140, 130, 90)))]
+        if not bright: raise ValueError(f'Missing inlay at fret {fret}, x={cx}')
+        left, right = min(x for x, _ in bright) - 3, max(x for x, _ in bright) + 3
+        top, bottom = min(y for _, y in bright) - 3, max(y for _, y in bright) + 3
+        shift = 30 if cx < 950 else -30
+        for y in range(top, bottom + 1):
+            for x in range(left, right + 1):
+                image.putpixel((x, y), source.getpixel((x + shift, y)))
 # A limited palette makes paths compact while retaining real fingerboard grain.
 image = image.crop((850, 0, 1150, 2000))
 with tempfile.TemporaryDirectory() as tmp:
