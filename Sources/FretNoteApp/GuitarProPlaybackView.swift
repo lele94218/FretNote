@@ -76,7 +76,8 @@ struct GuitarProPlaybackView: View, Localizable {
                 Text("\(frame?.bar ?? firstBar) / \(score.barCount)").monospacedDigit()
             }.foregroundStyle(palette.muted).lineLimit(1)
             GuitarInstrumentCanvas(camera: camera, notes: [], current: 0, dark: scheme == .dark,
-                                  activePositions: frame?.positions ?? [], upcomingPositions: nextPositions)
+                                  activePositions: frame?.positions ?? [], upcomingPositions: nextPositions,
+                                  barPositions: ScoreBarPositions.positions(in: frames, at: step))
                 .animation(reduceMotion ? nil : .easeInOut(duration: FretboardPlaybackTimeline.cameraAnimation), value: camera)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             HStack(spacing: 16) {
@@ -151,7 +152,7 @@ struct GuitarProPlaybackView: View, Localizable {
     private func lookAhead(_ index: Int) -> [GuitarNote] {
         guard frames.indices.contains(index) else { return [] }
         let end = frames[index].start + 1.6 * speed
-        return frames.dropFirst(index).prefix { $0.start <= end }.flatMap(\.positions)
+        return ScoreBarPositions.positions(in: frames, at: index) + frames.dropFirst(index).prefix { $0.start <= end }.flatMap(\.positions)
     }
     private func settle() {
         guard follow else { return }
@@ -160,13 +161,13 @@ struct GuitarProPlaybackView: View, Localizable {
     }
     private func prepare(_ next: Int, animated: Bool) {
         guard follow, frames.indices.contains(next) else { return }
-        let targetNotes = frames[next].positions
+        let targetNotes = ScoreBarPositions.positions(in: frames, at: next)
         guard targetNotes.contains(where: {
             let x = GuitarGeometry.noteX($0.fret)
             return x < camera.center - camera.width / 2 + 65 || x > camera.center + camera.width / 2 - 65
         }) else { return }
         // Include every intervening note, so fast phrases remain visible during the pan.
-        let positions = frames[min(step, next)...next].flatMap(\.positions) + lookAhead(next)
+        let positions = ScoreBarPositions.positions(in: frames, at: step) + frames[min(step, next)...next].flatMap(\.positions) + lookAhead(next)
         var transaction = Transaction(); transaction.disablesAnimations = !animated || reduceMotion
         withTransaction(transaction) { camera = .fitting(positions) }
     }

@@ -10,6 +10,7 @@ struct GuitarInstrumentCanvas: View, Animatable {
     var dark: Bool
     var activePositions: [GuitarNote]? = nil
     var upcomingPositions: [GuitarNote]? = nil
+    var barPositions: [GuitarNote] = []
     var animatableData: AnimatablePair<CGFloat, CGFloat> {
         get { AnimatablePair(camera.center, camera.width) }
         set { camera = FretboardCamera(center: newValue.first, width: newValue.second) }
@@ -84,7 +85,9 @@ struct GuitarInstrumentCanvas: View, Animatable {
         // Marker diameter is bounded by physical string spacing, even in overview.
         // Text belongs outside the neck; it must never cover adjacent strings.
         let markers: [(GuitarNote, Int)] = activePositions.map { active in
-            (upcomingPositions ?? []).filter { !active.contains($0) }.map { ($0, 1) } + active.map { ($0, 0) }
+            let upcoming = (upcomingPositions ?? []).filter { !active.contains($0) }
+            let background = barPositions.filter { !active.contains($0) && !upcoming.contains($0) }
+            return background.map { ($0, 2) } + upcoming.map { ($0, 1) } + active.map { ($0, 0) }
         } ?? (min(notes.count, max(0, current - 2))..<min(notes.count, max(0, current + 3))).map { (notes[$0], $0 - current) }
         for (note, relative) in markers {
             guard (0...21).contains(note.fret), (1...6).contains(note.string) else { continue }
