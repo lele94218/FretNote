@@ -100,18 +100,33 @@ final class FretboardCameraTests: XCTestCase {
         // Export deterministic camera samples to review the same transform used by
         // the animated Canvas, without touching microphone or user learning data.
         let demo = GuitarGeometry.demo
-        let first = FretboardCamera.following(demo, index: 7)
-        let second = FretboardCamera.preparing(demo, index: 8, from: first)
-        let third = FretboardCamera.preparing(demo, index: 9, from: second)
-        let targets = [FretboardCamera.overview, first, second, third]
-        for frame in 0..<72 {
-            let segment = frame / 24
-            let moving = frame % 24 < 9
-            let t = min(1, CGFloat(frame % 24) / 8)
+        let events = FretboardPlaybackTimeline.events(startIndex: 7, noteCount: demo.count)
+        var eventIndex = 0
+        var noteIndex = 7
+        var from = FretboardCamera.following(demo, index: noteIndex)
+        var target = from
+        var transitionStart = 0.0
+        // 20 fps: each 1.2-second note occupies exactly 24 frames, whether
+        // the camera moves during that note or remains stationary.
+        for frame in 0..<96 {
+            let elapsed = Double(frame) / 20
+            while eventIndex < events.count && events[eventIndex].time <= elapsed {
+                let event = events[eventIndex]
+                switch event.action {
+                case .frame(let next):
+                    from = target
+                    target = FretboardCamera.preparing(demo, index: next, from: target)
+                    transitionStart = event.time
+                case .note(let next): noteIndex = next
+                case .finish: break
+                }
+                eventIndex += 1
+            }
+            let t = CGFloat(min(1, max(0, (elapsed - transitionStart) / FretboardPlaybackTimeline.cameraAnimation)))
             let eased = t * t * (3 - 2 * t)
-            let a = targets[segment], b = targets[segment + 1]
-            let camera = FretboardCamera(center: a.center + (b.center - a.center) * eased, width: a.width + (b.width - a.width) * eased)
-            let view = GuitarInstrumentCanvas(camera: camera, notes: GuitarGeometry.demo, current: moving ? [7, 7, 8][segment] : [7, 8, 9][segment], dark: false)
+            let camera = FretboardCamera(center: from.center + (target.center - from.center) * eased,
+                                         width: from.width + (target.width - from.width) * eased)
+            let view = GuitarInstrumentCanvas(camera: camera, notes: demo, current: noteIndex, dark: false)
                 .background(Color.white).frame(width: 960, height: 360)
             let renderer = ImageRenderer(content: view)
             let cgImage = try XCTUnwrap(renderer.cgImage)

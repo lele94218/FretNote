@@ -114,28 +114,25 @@ struct FullFretboardView: View, Localizable {
     var prompt: String? = nil
     @State private var step = 0
     @State private var playing = false
-    @State private var isFraming = false
     @State private var follow = true
     @State private var camera = FretboardCamera.overview
     private var index: Int { live ? current : step }
     private var palette: AppPalette { AppPalette(scheme: scheme) }
-    private var animation: Animation? { reduceMotion ? nil : .easeInOut(duration: 0.55) }
+    private var animation: Animation? { reduceMotion ? nil : .easeInOut(duration: FretboardPlaybackTimeline.cameraAnimation) }
     var body: some View {
         VStack(spacing: 16) {
             HStack {
                 Text(L("全指板")).font(.editorial(size: 20 * scale))
                 Spacer()
-                Button(L("完整琴颈")) { playing = false; follow = false; camera = .overview }
-                Button(L("自动取景")) { playing = false; follow = true; updateCamera() }
+                Button(L("完整琴颈")) { follow = false; camera = .overview }
+                Button(L("自动取景")) { follow = true; updateCamera() }
                     .buttonStyle(EditorialButtonStyle(prominent: follow))
                 Button(L("完成")) { dismiss() }.keyboardShortcut(.cancelAction)
             }
             HStack {
                 Text(L(live ? "跟随练习进度 · 显示参考弦位" : "动画演示 · 不计入学习记录"))
                 Spacer()
-                if isFraming {
-                    Text(L("准备下一个音…"))
-                } else if let prompt {
+                if let prompt {
                     Text(prompt).monospacedDigit()
                 } else if notes.indices.contains(index) {
                     let note = notes[index]
@@ -170,16 +167,27 @@ struct FullFretboardView: View, Localizable {
             .onChange(of: notes) { _ in if live && framingNotes == nil { updateCamera() } }
             .onAppear { if live { updateCamera() } }
             .task(id: playing) {
-                guard playing else { isFraming = false; return }
-                // A note is not activated until its camera has finished moving.
-                guard await prepareFrame(at: step, initial: true) else { return }
-                while !Task.isCancelled {
-                    do { try await Task.sleep(nanoseconds: 1_200_000_000) } catch { return }
+                guard playing else { return }
+                guard notes.indices.contains(step) else { playing = false; return }
+                // Set the initial shot immediately; start the clock without a pre-roll.
+                updateCamera()
+                let clock = ContinuousClock()
+                let origin = clock.now
+                for event in FretboardPlaybackTimeline.events(startIndex: step, noteCount: notes.count) {
+                    do {
+                        try await clock.sleep(until: origin.advanced(by: .seconds(event.time)), tolerance: .milliseconds(5))
+                    } catch { return }
                     guard !Task.isCancelled else { return }
-                    guard step + 1 < notes.count else { playing = false; return }
-                    let next = step + 1
-                    guard await prepareFrame(at: next) else { return }
-                    step = next
+                    switch event.action {
+                    case .frame(let next):
+                        let noteDeadline = origin.advanced(by: .seconds(event.time + FretboardPlaybackTimeline.cameraLead))
+                        let remaining = clock.now.duration(to: noteDeadline)
+                        prepareFrame(at: next, animated: remaining >= .seconds(FretboardPlaybackTimeline.cameraAnimation + 0.08))
+                    case .note(let next):
+                        step = next
+                    case .finish:
+                        playing = false
+                    }
                 }
             }
     }
@@ -191,24 +199,24 @@ struct FullFretboardView: View, Localizable {
         transaction.disablesAnimations = true
         withTransaction(transaction) {
             camera = live ? .fitting(framingNotes ?? notes) : .following(notes, index: index)
-            isFraming = false
         }
     }
-    private func prepareFrame(at next: Int, initial: Bool = false) async -> Bool {
-        guard follow else { return !Task.isCancelled }
-        let target = initial ? FretboardCamera.following(notes, index: next)
-            : FretboardCamera.preparing(notes, index: next, from: camera)
-        guard target != camera else { return !Task.isCancelled }
-        isFraming = true
-        camera = target
-        if !reduceMotion {
-            // Longer than the 0.55 s camera animation, including a settling margin.
-            do { try await Task.sleep(nanoseconds: 700_000_000) }
-            catch { return false }
+    private func prepareFrame(at next: Int, animated: Bool) {
+        guard follow else { return }
+        var target = FretboardCamera.preparing(notes, index: next, from: camera)
+        // Keep the sounding note on screen while moving toward the next phrase.
+        if notes.indices.contains(step) {
+            let x = GuitarGeometry.noteX(notes[step].fret)
+            if x < target.center - target.width / 2 + 40 || x > target.center + target.width / 2 - 40 {
+                target = .fitting([notes[step]] + Array(notes[next..<min(notes.count, next + 3)]))
+            }
         }
-        guard !Task.isCancelled else { return false }
-        isFraming = false
-        return true
+        guard target != camera else { return }
+        var transaction = Transaction()
+        // If a UI stall leaves too little lead time, settle immediately instead
+        // of delaying a note or letting the pan run across its scheduled onset.
+        transaction.disablesAnimations = !animated || reduceMotion
+        withTransaction(transaction) { camera = target }
     }
     private var overview: some View {
         GeometryReader { space in
