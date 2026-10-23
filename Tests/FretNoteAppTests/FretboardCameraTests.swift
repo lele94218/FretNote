@@ -99,7 +99,11 @@ final class FretboardCameraTests: XCTestCase {
         }
         // Export deterministic camera samples to review the same transform used by
         // the animated Canvas, without touching microphone or user learning data.
-        let targets = [FretboardCamera.overview, .following(GuitarGeometry.demo, index: 2), .following(GuitarGeometry.demo, index: 9), .following(GuitarGeometry.demo, index: 14)]
+        let demo = GuitarGeometry.demo
+        let first = FretboardCamera.following(demo, index: 7)
+        let second = FretboardCamera.preparing(demo, index: 8, from: first)
+        let third = FretboardCamera.preparing(demo, index: 9, from: second)
+        let targets = [FretboardCamera.overview, first, second, third]
         for frame in 0..<72 {
             let segment = frame / 24
             let moving = frame % 24 < 9
@@ -107,7 +111,7 @@ final class FretboardCameraTests: XCTestCase {
             let eased = t * t * (3 - 2 * t)
             let a = targets[segment], b = targets[segment + 1]
             let camera = FretboardCamera(center: a.center + (b.center - a.center) * eased, width: a.width + (b.width - a.width) * eased)
-            let view = GuitarInstrumentCanvas(camera: camera, notes: moving ? [] : GuitarGeometry.demo, current: [2, 9, 14][segment], dark: false)
+            let view = GuitarInstrumentCanvas(camera: camera, notes: GuitarGeometry.demo, current: moving ? [7, 7, 8][segment] : [7, 8, 9][segment], dark: false)
                 .background(Color.white).frame(width: 960, height: 360)
             let renderer = ImageRenderer(content: view)
             let cgImage = try XCTUnwrap(renderer.cgImage)

@@ -23,7 +23,7 @@ Actual app views rendered with demo data; no personal learning records are shown
 
 ![English interface](docs/screenshots/chord-learning-english.jpg)
 
-Auto frame settles before activating each demo note and reuses the current view for nearby notes. Live exercises frame the whole set in advance and keep the camera still while you play.
+Auto frame preserves the current-note, next-note and string highlights while moving, then switches to the next demo note after settling. Nearby notes reuse the current view. Live exercises frame the whole set in advance and keep the camera still while you play.
 
 Whole neck shows the headstock and 21-fret neck with a cropped body shoulder, using photo-traced vector artwork. A larger cyan dot and matching label highlight the current note; orange marks the next note. The active string is cyan, with its sounding length from fret to bridge emphasized. Traced contours are smoothed as vector curves. Note markers scale with string spacing; note names stay outside the neck to keep all six strings readable.
 

@@ -136,7 +136,7 @@ struct FullFretboardView: View, Localizable {
                         .monospacedDigit()
                 }
             }.foregroundStyle(palette.muted)
-            GuitarInstrumentCanvas(camera: camera, notes: isFraming ? [] : notes, current: index, dark: scheme == .dark)
+            GuitarInstrumentCanvas(camera: camera, notes: notes, current: index, dark: scheme == .dark)
                 .animation(animation, value: camera)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             overview
