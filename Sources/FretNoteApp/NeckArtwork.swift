@@ -24,7 +24,14 @@ enum NeckArtwork {
     static let outline = Path { p in
         guard let points = artwork?.outline, let first = points.first else { return }
         p.move(to: CGPoint(x: first[0], y: first[1]))
-        for point in points.dropFirst() { p.addLine(to: CGPoint(x: point[0], y: point[1])) }
+        for i in points.indices {
+            let a = points[i], b = points[(i + 1) % points.count]
+            let previous = points[(i + points.count - 1) % points.count]
+            let next = points[(i + 2) % points.count]
+            p.addCurve(to: CGPoint(x: b[0], y: b[1]),
+                       control1: CGPoint(x: a[0] + (b[0] - previous[0]) / 6, y: a[1] + (b[1] - previous[1]) / 6),
+                       control2: CGPoint(x: b[0] - (next[0] - a[0]) / 6, y: b[1] - (next[1] - a[1]) / 6))
+        }
         p.closeSubpath()
     }
     static let layers = makeLayers(artwork)

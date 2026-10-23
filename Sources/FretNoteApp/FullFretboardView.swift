@@ -22,6 +22,7 @@ struct GuitarInstrumentCanvas: View, Animatable {
     }
     private func drawGuitar(_ context: inout GraphicsContext, zoom: CGFloat, visibleHeight: CGFloat) {
         let accent = Color(red: 0.20, green: 0.85, blue: 0.96)
+        let upcomingAccent = Color(red: 1.0, green: 0.70, blue: 0.25)
         for layer in NeckArtwork.bodyLayers {
             context.fill(layer.path, with: .color(layer.color))
         }
@@ -55,6 +56,20 @@ struct GuitarInstrumentCanvas: View, Animatable {
             context.stroke(line, with: .color(.black.opacity(0.8)), lineWidth: gauge + 1.3)
             context.stroke(line, with: .color(Color(white: string > 3 ? 0.65 : 0.87)), lineWidth: gauge)
             context.stroke(line, with: .color(.white.opacity(0.7)), lineWidth: max(0.3, gauge * 0.24))
+            if notes.indices.contains(current), notes[current].string == string,
+               (0...21).contains(notes[current].fret) {
+                let stop = GuitarGeometry.fretX(notes[current].fret)
+                var muted = Path()
+                muted.move(to: CGPoint(x: 0, y: GuitarGeometry.stringY(string, x: 0)))
+                muted.addLine(to: CGPoint(x: stop, y: GuitarGeometry.stringY(string, x: stop)))
+                context.stroke(muted, with: .color(accent.opacity(0.45)), lineWidth: 1.5 / zoom)
+                // The sounding length runs from the fretted contact to the bridge.
+                var sounding = Path()
+                sounding.move(to: CGPoint(x: stop, y: GuitarGeometry.stringY(string, x: stop)))
+                sounding.addLine(to: CGPoint(x: GuitarGeometry.scaleLength, y: GuitarGeometry.stringY(string, x: GuitarGeometry.scaleLength)))
+                context.stroke(sounding, with: .color(accent.opacity(0.18)), lineWidth: 4 / zoom)
+                context.stroke(sounding, with: .color(accent), lineWidth: 2 / zoom)
+            }
         }
         // Marker diameter is bounded by physical string spacing, even in overview.
         // Text belongs outside the neck; it must never cover adjacent strings.
@@ -62,13 +77,8 @@ struct GuitarInstrumentCanvas: View, Animatable {
             let note = notes[index]
             guard (0...21).contains(note.fret), (1...6).contains(note.string) else { continue }
             let x = GuitarGeometry.noteX(note.fret), y = GuitarGeometry.stringY(note.string, x: x)
-            let radius = GuitarGeometry.markerRadius(x: x, zoom: zoom) * (index == current ? 1 : 0.65)
+            let radius = GuitarGeometry.markerRadius(x: x, zoom: zoom) * (index == current ? 1 : (index == current + 1 ? 0.8 : 0.65))
             if index == current {
-                var segment = Path()
-                let left = max(0, x - 30), right = max(0, x + 30)
-                segment.move(to: CGPoint(x: left, y: GuitarGeometry.stringY(note.string, x: left)))
-                segment.addLine(to: CGPoint(x: right, y: GuitarGeometry.stringY(note.string, x: right)))
-                context.stroke(segment, with: .color(accent), lineWidth: 2 / zoom)
                 let labelY = max(-100 - 18 / zoom, -visibleHeight / 2 + 22 / zoom)
                 var leader = Path(); leader.move(to: CGPoint(x: x, y: y - radius - 1))
                 leader.addLine(to: CGPoint(x: x, y: labelY + 17 / zoom))
@@ -78,7 +88,7 @@ struct GuitarInstrumentCanvas: View, Animatable {
                 context.draw(Text(note.fullName).font(.editorial(size: 16 / zoom, weight: .semibold)).foregroundColor(.black), at: CGPoint(x: x, y: labelY))
             }
             let dot = Path(ellipseIn: CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2))
-            context.fill(dot, with: .color(index == current ? accent : (index < current ? .white.opacity(0.35) : .white)))
+            context.fill(dot, with: .color(index == current ? accent : (index == current + 1 ? upcomingAccent : (index < current ? .white.opacity(0.35) : .white))))
             context.stroke(dot, with: .color(.black), lineWidth: radius * 0.3)
         }
     }

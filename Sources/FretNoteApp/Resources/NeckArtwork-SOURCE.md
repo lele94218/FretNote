@@ -35,3 +35,13 @@ The original transparent background is preserved. The body finish is neutralized
 and its original neck removed, so our calibrated 21-fret neck remains the source
 of note positions. The camera crops before the bridge; the entire body is never
 shown in Whole neck. The source photo remains outside the app and repository.
+
+## Vector smoothing
+
+After regenerating both trace resources, run `python scripts/smooth-artwork.py`
+once in the same Python environment (NumPy/SciPy are installed by svgpathtools).
+The pass resamples closed contours uniformly, smooths sub-unit tracing noise and
+reconstructs continuous cubic curves. The native neck clipping outline also uses
+cubic curves. This does not blur a bitmap at runtime or move note/fret coordinates.
+To change smoothing settings, first regenerate the traces rather than repeatedly
+smoothing already processed resources.
