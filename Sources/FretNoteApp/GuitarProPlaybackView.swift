@@ -10,6 +10,10 @@ struct GuitarProPlaybackView: View, Localizable {
     @Environment(\.dismiss) private var dismiss
     let score: GuitarProScore
     let close: () -> Void
+    @StateObject private var audio = ScoreMIDIPlayer()
+    @State private var volume = 0.65
+    @State private var resumePosition: Double?
+    @State private var audioError: String?
     @State private var trackID: Int
     @State private var firstBar = 1
     @State private var lastBar: Int
@@ -65,7 +69,7 @@ struct GuitarProPlaybackView: View, Localizable {
                 Toggle(L("循环"), isOn: $looping).toggleStyle(.checkbox)
             }.textFieldStyle(.roundedBorder)
             HStack {
-                Text(L("指板跟谱 · 无声播放"))
+                Text(L(audio.preparing ? "正在准备音频…" : "指板跟谱 · MIDI 播放"))
                 Spacer()
                 Text(frame?.notes.isEmpty == true ? L("休止") : (frame?.positions.map(\.fullName).joined(separator: " + ") ?? ""))
                 Text(techniques)
@@ -78,11 +82,18 @@ struct GuitarProPlaybackView: View, Localizable {
             HStack(spacing: 16) {
                 Button { seek(max(0, step - 1)) } label: { Image(systemName: "backward.end") }.accessibilityLabel(L("上一个音"))
                 Button(L(playing ? "暂停" : "播放")) {
-                    if step >= frames.count - 1 { step = 0 }
-                    playing.toggle()
+                    if playing {
+                        resumePosition = audio.preparing ? nil : audio.position
+                        playing = false; audio.stop()
+                    } else {
+                        if step >= frames.count - 1 && resumePosition == nil { step = 0 }
+                        playing = true
+                    }
                 }.buttonStyle(EditorialButtonStyle(prominent: true)).disabled(frames.isEmpty).keyboardShortcut(.space, modifiers: [])
                 Button { seek(min(max(0, frames.count - 1), step + 1)) } label: { Image(systemName: "forward.end") }.accessibilityLabel(L("下一个音"))
                 Slider(value: Binding(get: { Double(step) }, set: { seek(Int($0)) }), in: 0...Double(max(1, frames.count - 1)), step: 1).accessibilityLabel(L("乐谱进度"))
+                Image(systemName: volume == 0 ? "speaker.slash" : "speaker.wave.2").accessibilityHidden(true)
+                Slider(value: $volume, in: 0...1).frame(width: 90).accessibilityLabel(L("音量"))
                 Text("\(frames.isEmpty ? 0 : step + 1) / \(frames.count)").monospacedDigit()
             }
         }
@@ -94,37 +105,49 @@ struct GuitarProPlaybackView: View, Localizable {
         .onChange(of: trackID) { _ in seek(0) }
         .onChange(of: firstBar) { _ in firstBar = max(1, min(score.barCount, firstBar)); lastBar = max(firstBar, lastBar); seek(0) }
         .onChange(of: lastBar) { _ in lastBar = max(firstBar, min(score.barCount, lastBar)); seek(0) }
-        .onChange(of: speed) { _ in playing = false }
+        .onChange(of: speed) { _ in seek(step) }
+        .onChange(of: volume) { audio.volume = Float($0) }
+        .onChange(of: playing) { if !$0 { audio.stop() } }
+        .onChange(of: looping) { value in
+            do { try audio.setLooping(value) } catch { audioError = error.localizedDescription; playing = false }
+        }
+        .onDisappear { audio.stop() }
+        .alert(L("无法播放"), isPresented: Binding(get: { audioError != nil }, set: { if !$0 { audioError = nil } })) {
+            Button(L("好")) { audioError = nil }
+        } message: { Text(L(audioError ?? "")) }
         .task(id: playing) {
-            guard playing, frames.indices.contains(step) else { return }
+            guard playing, frames.indices.contains(step), let track = score.tracks.first(where: { $0.id == trackID }) else { return }
             let sequence = frames
-            let clock = ContinuousClock()
-            var origin = clock.now
-            var from = step
-            repeat {
+            do {
+                try await audio.prepare(track: track, first: firstBar, last: lastBar, speed: speed)
+                try Task.checkCancellation()
+                audio.volume = Float(volume)
+                try audio.play(from: resumePosition ?? sequence[step].start / speed, looping: looping)
+                resumePosition = nil
                 settle()
-                let events = ScorePlaybackTimeline.events(frames: sequence, startIndex: from, speed: speed)
-                for event in events {
-                    do { try await clock.sleep(until: origin.advanced(by: .seconds(event.time)), tolerance: .milliseconds(3)) }
-                    catch { return }
-                    guard !Task.isCancelled else { return }
-                    switch event.action {
-                    case .frame(let next):
-                        let deadline = (sequence[next].start - sequence[from].start) / speed
-                        let remaining = clock.now.duration(to: origin.advanced(by: .seconds(deadline)))
-                        prepare(next, animated: remaining >= .seconds(FretboardPlaybackTimeline.cameraAnimation + 0.05))
-                    case .note(let next): step = next
-                    case .finish: break
+                var nextCue = step + 1
+                var previousPosition = audio.position
+                while !Task.isCancelled {
+                    let position = audio.position
+                    if position + 0.001 < previousPosition {
+                        step = 0; nextCue = 1; settle()
                     }
+                    previousPosition = position
+                    while step + 1 < sequence.count && sequence[step + 1].start / speed <= position { step += 1 }
+                    while nextCue < sequence.count && sequence[nextCue].start / speed - FretboardPlaybackTimeline.cameraLead <= position {
+                        if nextCue > step {
+                            prepare(nextCue, animated: sequence[nextCue].start / speed - position >= FretboardPlaybackTimeline.cameraAnimation + 0.05)
+                        }
+                        nextCue += 1
+                    }
+                    if audio.finished { playing = false; resumePosition = nil; break }
+                    try await Task.sleep(nanoseconds: 16_000_000)
                 }
-                if looping {
-                    origin = origin.advanced(by: .seconds(events.last?.time ?? 0))
-                    from = 0; step = 0
-                } else { playing = false }
-            } while looping && !Task.isCancelled
+            } catch is CancellationError { return }
+            catch { audioError = error.localizedDescription; playing = false }
         }
     }
-    private func seek(_ index: Int) { playing = false; step = index; settle() }
+    private func seek(_ index: Int) { playing = false; audio.stop(); resumePosition = nil; step = index; settle() }
     private func lookAhead(_ index: Int) -> [GuitarNote] {
         guard frames.indices.contains(index) else { return [] }
         let end = frames[index].start + 1.6 * speed

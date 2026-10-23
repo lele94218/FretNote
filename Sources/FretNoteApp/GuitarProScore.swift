@@ -13,6 +13,7 @@ struct GuitarProScore: Decodable, Sendable {
         let name: String
         let supported: Bool
         let frames: [Frame]
+        let events: [MIDIEvent]
         func selection(from first: Int, through last: Int) -> [Frame] {
             var time = 0.0
             return frames.filter { $0.bar >= first && $0.bar <= last }.map { frame in
@@ -21,6 +22,14 @@ struct GuitarProScore: Decodable, Sendable {
                 return Frame(start: time, end: time + duration, bar: frame.bar, notes: frame.notes)
             }
         }
+    }
+    struct MIDIEvent: Decodable, Sendable, Equatable {
+        let time: Double
+        let kind: Int
+        let channel: Int
+        let key: Int
+        let value: Int
+        func at(_ time: Double) -> Self { .init(time: time, kind: kind, channel: channel, key: key, value: value) }
     }
     struct Frame: Decodable, Sendable {
         let start: Double

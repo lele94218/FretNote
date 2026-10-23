@@ -233,5 +233,11 @@
   "文件太大（最大 20 MB）": "File too large (20 MB maximum)",
   "无法加载乐谱解析器": "Could not load the score parser",
   "无法读取 Guitar Pro 文件": "Could not read this Guitar Pro file",
-  "没有可显示的音轨：需要标准调弦、无变调夹、最高 21 品的六弦吉他": "No compatible tracks. Use a standard-tuned six-string guitar, without a capo, up to fret 21."
+  "没有可显示的音轨：需要标准调弦、无变调夹、最高 21 品的六弦吉他": "No compatible tracks. Use a standard-tuned six-string guitar, without a capo, up to fret 21.",
+  "指板跟谱 · MIDI 播放": "Fretboard · MIDI playback",
+  "正在准备音频…": "Preparing audio…",
+  "无法播放": "Could Not Play",
+  "音量": "Volume",
+  "无法准备 MIDI 音频，请将播放范围限制在 20 分钟以内": "Could not prepare MIDI audio. Limit the playback range to 20 minutes.",
+  "无法分配音频缓冲区": "Could not allocate the audio buffer."
 }

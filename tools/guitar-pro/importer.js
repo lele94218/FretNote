@@ -3,8 +3,9 @@ import { importer, midi, Settings } from './node_modules/@coderline/alphatab/dis
 export function parse(bytes) {
     const settings = new Settings();
     const score = importer.ScoreLoader.loadScoreFromBytes(new Uint8Array(bytes), settings);
+    const midiFile = new midi.MidiFile();
     const generator = new midi.MidiFileGenerator(score, settings,
-        new midi.AlphaSynthMidiFileHandler(new midi.MidiFile()));
+        new midi.AlphaSynthMidiFileHandler(midiFile));
     generator.generate();
     const bars = generator.tickLookup.masterBars;
     if (bars.length > 20000) throw new Error('Score is too large');
@@ -47,7 +48,19 @@ export function parse(bytes) {
             }
         }
         const hasNotes=frames.some(f=>f.notes.length);
-        if(hasNotes) tracks.push({id:track.index,name:track.name,supported:supported && frames.every(f=>f.notes.every(n=>n.fret<=21)),frames});
+        const events = [];
+        for (const event of midiFile.tracks[track.index]?.events ?? []) {
+            let kind, key=0, value=0;
+            if(event instanceof midi.NoteOnEvent) { kind=1; key=event.noteKey; value=event.noteVelocity; }
+            else if(event instanceof midi.NoteOffEvent) { kind=2; key=event.noteKey; }
+            else if(event instanceof midi.ControlChangeEvent) { kind=3; key=event.controller; value=event.value; }
+            else if(event instanceof midi.ProgramChangeEvent) { kind=4; value=event.program; }
+            else if(event instanceof midi.PitchBendEvent) { kind=5; value=event.value; }
+            else if(event instanceof midi.NoteBendEvent) { kind=6; key=event.noteKey; value=Math.round(event.value / 262144); }
+            else continue;
+            events.push({time:seconds(event.tick - midiFile.tickShift),kind,channel:event.channel,key,value});
+        }
+        if(hasNotes) tracks.push({id:track.index,name:track.name,supported:supported && frames.every(f=>f.notes.every(n=>n.fret<=21)),frames,events});
     }
     return JSON.stringify({title:score.title || 'Guitar Pro',tempo:score.tempo,barCount:score.masterBars.length,tracks});
 }
