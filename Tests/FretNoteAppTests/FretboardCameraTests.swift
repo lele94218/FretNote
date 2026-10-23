@@ -56,6 +56,25 @@ final class FretboardCameraTests: XCTestCase {
         XCTAssertLessThan(bounds.maxX, GuitarGeometry.fretX(21) + 30)
     }
 
+    func testCameraStaysSettledUntilLookAheadLeavesSafeFrame() {
+        let notes = [GuitarNote(string: 1, fret: 5), GuitarNote(string: 2, fret: 6),
+                     GuitarNote(string: 3, fret: 7), GuitarNote(string: 1, fret: 8),
+                     GuitarNote(string: 1, fret: 21)]
+        let initial = FretboardCamera.following(notes, index: 0)
+        XCTAssertEqual(FretboardCamera.preparing(notes, index: 1, from: initial), initial)
+        let prepared = FretboardCamera.preparing(notes, index: 2, from: initial)
+        XCTAssertNotEqual(prepared, initial)
+        for note in notes[2...] {
+            XCTAssertGreaterThan(GuitarGeometry.noteX(note.fret), prepared.center - prepared.width / 2)
+            XCTAssertLessThan(GuitarGeometry.noteX(note.fret), prepared.center + prepared.width / 2)
+        }
+        let live = FretboardCamera.fitting(notes)
+        for note in notes {
+            XCTAssertGreaterThan(GuitarGeometry.noteX(note.fret), live.center - live.width / 2)
+            XCTAssertLessThan(GuitarGeometry.noteX(note.fret), live.center + live.width / 2)
+        }
+    }
+
     @MainActor
     func testRenderCamera() async throws {
         guard let path = ProcessInfo.processInfo.environment["FRETNOTE_CAMERA_SNAPSHOTS"] else { return }
@@ -63,7 +82,8 @@ final class FretboardCameraTests: XCTestCase {
         let folder = URL(fileURLWithPath: path)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         for (name, live, index, dark) in [("overview", false, 0, false), ("low", true, 2, false), ("high", true, 14, true), ("large-english", false, 0, false)] {
-            let host = NSHostingView(rootView: FullFretboardView(notes: GuitarGeometry.demo, current: index, live: live)
+            let host = NSHostingView(rootView: FullFretboardView(notes: GuitarGeometry.demo, current: index, live: live,
+                framingNotes: live ? Array(GuitarGeometry.demo[index..<min(index + 3, GuitarGeometry.demo.count)]) : nil)
                 .environment(\.appLanguage, name == "large-english" ? .english : .chinese)
                 .environment(\.interfaceScale, name == "large-english" ? 1.75 : 1.25)
                 .preferredColorScheme(dark ? .dark : .light).frame(width: 960, height: 620))
@@ -79,14 +99,15 @@ final class FretboardCameraTests: XCTestCase {
         }
         // Export deterministic camera samples to review the same transform used by
         // the animated Canvas, without touching microphone or user learning data.
-        let targets = [FretboardCamera.overview, .following(GuitarGeometry.demo, index: 2), .following(GuitarGeometry.demo, index: 9), .following(GuitarGeometry.demo, index: 14), .overview]
-        for frame in 0..<64 {
-            let segment = min(3, frame / 16)
-            let t = CGFloat(frame % 16) / 15
+        let targets = [FretboardCamera.overview, .following(GuitarGeometry.demo, index: 2), .following(GuitarGeometry.demo, index: 9), .following(GuitarGeometry.demo, index: 14)]
+        for frame in 0..<72 {
+            let segment = frame / 24
+            let moving = frame % 24 < 9
+            let t = min(1, CGFloat(frame % 24) / 8)
             let eased = t * t * (3 - 2 * t)
             let a = targets[segment], b = targets[segment + 1]
             let camera = FretboardCamera(center: a.center + (b.center - a.center) * eased, width: a.width + (b.width - a.width) * eased)
-            let view = GuitarInstrumentCanvas(camera: camera, notes: GuitarGeometry.demo, current: [2, 9, 14, 14][segment], dark: false)
+            let view = GuitarInstrumentCanvas(camera: camera, notes: moving ? [] : GuitarGeometry.demo, current: [2, 9, 14][segment], dark: false)
                 .background(Color.white).frame(width: 960, height: 360)
             let renderer = ImageRenderer(content: view)
             let cgImage = try XCTUnwrap(renderer.cgImage)

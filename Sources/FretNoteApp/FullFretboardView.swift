@@ -103,28 +103,32 @@ struct FullFretboardView: View, Localizable {
     var notes: [GuitarNote] = GuitarGeometry.demo
     var current: Int = 0
     var live = false
+    var framingNotes: [GuitarNote]? = nil
     var prompt: String? = nil
     @State private var step = 0
     @State private var playing = false
+    @State private var isFraming = false
     @State private var follow = true
     @State private var camera = FretboardCamera.overview
     private var index: Int { live ? current : step }
     private var palette: AppPalette { AppPalette(scheme: scheme) }
-    private var animation: Animation? { reduceMotion ? nil : .easeInOut(duration: 0.7) }
+    private var animation: Animation? { reduceMotion ? nil : .easeInOut(duration: 0.55) }
     var body: some View {
         VStack(spacing: 16) {
             HStack {
                 Text(L("全指板")).font(.editorial(size: 20 * scale))
                 Spacer()
-                Button(L("完整琴颈")) { follow = false; camera = .overview }
-                Button(L("自动取景")) { follow = true; updateCamera() }
+                Button(L("完整琴颈")) { playing = false; follow = false; camera = .overview }
+                Button(L("自动取景")) { playing = false; follow = true; updateCamera() }
                     .buttonStyle(EditorialButtonStyle(prominent: follow))
                 Button(L("完成")) { dismiss() }.keyboardShortcut(.cancelAction)
             }
             HStack {
                 Text(L(live ? "跟随练习进度 · 显示参考弦位" : "动画演示 · 不计入学习记录"))
                 Spacer()
-                if let prompt {
+                if isFraming {
+                    Text(L("准备下一个音…"))
+                } else if let prompt {
                     Text(prompt).monospacedDigit()
                 } else if notes.indices.contains(index) {
                     let note = notes[index]
@@ -132,7 +136,7 @@ struct FullFretboardView: View, Localizable {
                         .monospacedDigit()
                 }
             }.foregroundStyle(palette.muted)
-            GuitarInstrumentCanvas(camera: camera, notes: notes, current: index, dark: scheme == .dark)
+            GuitarInstrumentCanvas(camera: camera, notes: isFraming ? [] : notes, current: index, dark: scheme == .dark)
                 .animation(animation, value: camera)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             overview
@@ -142,7 +146,7 @@ struct FullFretboardView: View, Localizable {
                     Button { playing = false; step = max(0, step - 1); updateCamera() } label: { Image(systemName: "backward.end") }.accessibilityLabel(L("上一个音")).keyboardShortcut(.leftArrow, modifiers: [])
                     Button(L(playing ? "暂停演示" : "播放演示")) {
                         if step == notes.count - 1 { step = 0 }
-                        playing.toggle(); updateCamera()
+                        playing.toggle()
                     }.buttonStyle(EditorialButtonStyle(prominent: true))
                     Button { playing = false; step = min(max(0, notes.count - 1), step + 1); updateCamera() } label: { Image(systemName: "forward.end") }.accessibilityLabel(L("下一个音")).keyboardShortcut(.rightArrow, modifiers: [])
                     Slider(value: Binding(get: { Double(step) }, set: { playing = false; step = Int($0); updateCamera() }), in: 0...Double(max(1, notes.count - 1)), step: 1)
@@ -155,21 +159,49 @@ struct FullFretboardView: View, Localizable {
             .foregroundStyle(palette.ink).background(palette.background)
             .buttonStyle(EditorialButtonStyle())
             .frame(minWidth: 900, idealWidth: 960, minHeight: 560, idealHeight: 620)
-            .onChange(of: current) { _ in if live { updateCamera() } }
-            .onChange(of: notes) { _ in if live { updateCamera() } }
+            .onChange(of: framingNotes) { _ in if live { updateCamera() } }
+            .onChange(of: notes) { _ in if live && framingNotes == nil { updateCamera() } }
             .onAppear { if live { updateCamera() } }
             .task(id: playing) {
-                guard playing else { return }
+                guard playing else { isFraming = false; return }
+                // A note is not activated until its camera has finished moving.
+                guard await prepareFrame(at: step, initial: true) else { return }
                 while !Task.isCancelled {
                     do { try await Task.sleep(nanoseconds: 1_200_000_000) } catch { return }
                     guard !Task.isCancelled else { return }
-                    if step + 1 < notes.count { step += 1; updateCamera() }
-                    else { playing = false; camera = .overview; return }
+                    guard step + 1 < notes.count else { playing = false; return }
+                    let next = step + 1
+                    guard await prepareFrame(at: next) else { return }
+                    step = next
                 }
             }
     }
     private func updateCamera() {
-        if follow { camera = .following(notes, index: index) }
+        guard follow else { return }
+        // Live exercises are framed as a whole before playing, never chased
+        // reactively after each detected pitch. Manual scrubbing also settles at once.
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            camera = live ? .fitting(framingNotes ?? notes) : .following(notes, index: index)
+            isFraming = false
+        }
+    }
+    private func prepareFrame(at next: Int, initial: Bool = false) async -> Bool {
+        guard follow else { return !Task.isCancelled }
+        let target = initial ? FretboardCamera.following(notes, index: next)
+            : FretboardCamera.preparing(notes, index: next, from: camera)
+        guard target != camera else { return !Task.isCancelled }
+        isFraming = true
+        camera = target
+        if !reduceMotion {
+            // Longer than the 0.55 s camera animation, including a settling margin.
+            do { try await Task.sleep(nanoseconds: 700_000_000) }
+            catch { return false }
+        }
+        guard !Task.isCancelled else { return false }
+        isFraming = false
+        return true
     }
     private var overview: some View {
         GeometryReader { space in
@@ -204,6 +236,7 @@ struct PracticeFretboardSheet: View {
         let shown = Array(practice.notes.prefix(practice.index)) + (practice.hint ? practice.target.map { [$0] } ?? [] : [])
         FullFretboardView(notes: practice.active ? shown : GuitarGeometry.demo,
                           current: max(0, shown.count - 1), live: practice.active,
+                          framingNotes: practice.active ? practice.notes : nil,
                           prompt: practice.active ? practice.target.map { $0.fullName + " · \(practice.answered) / 20" } : nil)
     }
 }
@@ -214,6 +247,7 @@ struct ShapeFretboardSheet: View {
         let shown = drill.revealed || drill.completed ? all : Array(all.prefix(drill.noteIndex))
         FullFretboardView(notes: drill.active ? shown : GuitarGeometry.demo,
                           current: min(max(0, shown.count - 1), drill.noteIndex), live: drill.active,
+                          framingNotes: drill.active ? all : nil,
                           prompt: drill.active ? all.map(\.name).joined(separator: " · ") : nil)
     }
 }

@@ -27,7 +27,7 @@ for y in range(1000):
         rgb = source.getpixel((x, y))
         gray = round(sum(rgb) / 3)
         covered_by_neck = bool(crossings) and min(crossings) + 1 < 498 - x < max(crossings) - 1
-        old_neck_only = world_x < 790 and abs(498 - x) < 64
+        old_neck_only = world_x < 790 and 452 - y * 0.022 <= x <= 545 + y * 0.014
         alpha = 0 if covered_by_neck or old_neck_only else original.getpixel((x, y))[3]
         image.putpixel((x, y), (gray, gray, gray, alpha))
 with tempfile.TemporaryDirectory() as tmp:

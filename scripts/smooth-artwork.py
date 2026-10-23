@@ -2,7 +2,7 @@
 """Smooth traced vector contours in world units, without rasterizing the artwork.
 Run after trace-neck.py / trace-body.py using the same Python environment.
 """
-import json, math
+import json, math, sys
 from pathlib import Path
 import numpy as np
 from scipy.ndimage import gaussian_filter1d
@@ -40,7 +40,7 @@ def contour(values):
         result.extend([*c1, *c2, *b])
     return [round(float(v), 3) for v in result]
 
-for name in ['NeckArtwork', 'BodyArtwork']:
+for name in (sys.argv[1:] or ['NeckArtwork', 'BodyArtwork']):
     target = root / (name + '.json')
     data = json.loads(target.read_text())
     for layer in data['layers']:

@@ -11,7 +11,7 @@ Connect a guitar through an audio interface, read the note, and play it. FretNot
 
 [Download for macOS](https://github.com/lele94218/FretNote/releases/latest) · [Report an issue](https://github.com/lele94218/FretNote/issues)
 
-The guitar button in each practice header opens the **full 21-fret instrument**. Play the built-in animation demo, step through notes, scrub the timeline, or use Whole neck / Auto frame. The proportional camera widens for position changes and zooms in on nearby notes; the overview strip supports manual positioning. During an active exercise it follows completed notes and explicitly revealed hints, without exposing future answers. Respects Reduce Motion. Guitar Pro import is not part of this preview.
+The guitar button in each practice header opens the **full 21-fret instrument**. Play the built-in animation demo, step through notes, scrub the timeline, or use Whole neck / Auto frame. The proportional camera widens for position changes and zooms in on nearby notes; the overview strip supports manual positioning. During an active exercise it frames the entire note set once and only marks completed notes and explicitly revealed hints, without exposing future answers. Respects Reduce Motion. Guitar Pro import is not part of this preview.
 
 ## Screenshots
 
@@ -22,6 +22,8 @@ Actual app views rendered with demo data; no personal learning records are shown
 ![Chord learning with shared exercise navigation](docs/screenshots/chord-learning-light.jpg)
 
 ![English interface](docs/screenshots/chord-learning-english.jpg)
+
+Auto frame settles before activating each demo note and reuses the current view for nearby notes. Live exercises frame the whole set in advance and keep the camera still while you play.
 
 Whole neck shows the headstock and 21-fret neck with a cropped body shoulder, using photo-traced vector artwork. A larger cyan dot and matching label highlight the current note; orange marks the next note. The active string is cyan, with its sounding length from fret to bridge emphasized. Traced contours are smoothed as vector curves. Note markers scale with string spacing; note names stay outside the neck to keep all six strings readable.
 

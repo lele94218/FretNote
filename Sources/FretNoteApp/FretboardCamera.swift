@@ -8,13 +8,28 @@ struct FretboardCamera: Equatable {
     static func following(_ notes: [GuitarNote], index: Int) -> FretboardCamera {
         guard notes.indices.contains(index) else { return .overview }
         let upcoming = notes[index..<min(notes.count, index + 3)]
-        let xs = upcoming.map { GuitarGeometry.noteX($0.fret) }
+        return fitting(Array(upcoming))
+    }
+    static func fitting(_ notes: [GuitarNote]) -> FretboardCamera {
+        guard !notes.isEmpty else { return .overview }
+        let xs = notes.map { GuitarGeometry.noteX($0.fret) }
         let left = (xs.min() ?? 0) - 100
         let right = (xs.max() ?? 0) + 100
         let width = min(overview.width, max(370, right - left))
         let center = min(overview.center + overview.width / 2 - width / 2,
                          max(overview.center - overview.width / 2 + width / 2, (left + right) / 2))
         return FretboardCamera(center: center, width: width)
+    }
+    /// Keep a settled shot while the next phrase still fits with breathing room.
+    static func preparing(_ notes: [GuitarNote], index: Int, from camera: Self) -> Self {
+        guard notes.indices.contains(index) else { return camera }
+        let upcoming = notes[index..<min(notes.count, index + 3)]
+        let safeLeft = camera.center - camera.width / 2 + 65
+        let safeRight = camera.center + camera.width / 2 - 65
+        if upcoming.allSatisfy({ (safeLeft...safeRight).contains(GuitarGeometry.noteX($0.fret)) }) {
+            return camera
+        }
+        return following(notes, index: index)
     }
 }
 
