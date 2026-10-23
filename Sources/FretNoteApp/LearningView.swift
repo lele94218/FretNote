@@ -18,6 +18,7 @@ struct LearningView: View, Localizable {
     @ObservedObject var audio: AudioInput
     @ObservedObject var drill: ShapePracticeStore
     @State private var showHistory = false
+    @State private var showFullFretboard = false
     @EnvironmentObject private var appearance: AppearancePreferences
     @Environment(\.interfaceScale) private var scale
     @Environment(\.colorScheme) private var scheme
@@ -34,6 +35,7 @@ struct LearningView: View, Localizable {
                         .accessibilityLabel(L("显示或隐藏侧栏"))
                     Text(L(store.arpeggio ? L("琶音练习") : L("和弦练习"))).font(.editorial(size: 20 * scale, weight: .regular))
                     Spacer()
+                    Button { showFullFretboard = true } label: { Image(systemName: "guitars") }.help(L("全指板")).accessibilityLabel(L("全指板"))
                     OpenSettingsButton()
                 }.buttonStyle(EditorialButtonStyle())
                 Divider()
@@ -62,6 +64,7 @@ struct LearningView: View, Localizable {
         .foregroundStyle(palette.ink).background(palette.background).tint(palette.ink)
         .onChange(of: store.root) { _ in drill.clear() }
         .onChange(of: store.quality) { _ in drill.clear() }
+        .sheet(isPresented: $showFullFretboard) { ShapeFretboardSheet(drill: drill) }
         .sheet(isPresented: $showHistory) { LearningHistoryView(practice: practice) }
 
     }

@@ -16,6 +16,7 @@ struct ContentView: View, Localizable {
     @StateObject private var learningStore = LearningStore()
     @StateObject private var shapePractice = ShapePracticeStore()
     @State private var showProgress = false
+    @State private var showFullFretboard = false
     @State private var showError = false
     var body: some View {
         Group {
@@ -23,6 +24,7 @@ struct ContentView: View, Localizable {
                 LearningView(store: learningStore, practice: practice, audio: audio, drill: shapePractice)
             } else { practiceBody }
         }
+        .sheet(isPresented: $showFullFretboard) { PracticeFretboardSheet(practice: practice) }
         .onAppear {
             audio.onNote = { midi in
                 if practice.learning { shapePractice.receive(note: midi, records: practice) }
@@ -147,6 +149,7 @@ struct ContentView: View, Localizable {
                 .help(L("显示或隐藏侧栏（⌃⌘S）"))
             Text(L(practice.mode.rawValue)).font(.editorial(size: 20 * scale, weight: .regular))
             Spacer()
+            Button { showFullFretboard = true } label: { Image(systemName: "guitars") }.help(L("全指板")).accessibilityLabel(L("全指板"))
             OpenSettingsButton()
         }.buttonStyle(EditorialButtonStyle())
     }

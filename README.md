@@ -11,6 +11,8 @@ Connect a guitar through an audio interface, read the note, and play it. FretNot
 
 [Download for macOS](https://github.com/lele94218/FretNote/releases/latest) · [Report an issue](https://github.com/lele94218/FretNote/issues)
 
+The guitar button in each practice header opens the **full 21-fret instrument**. Play the built-in animation demo, step through notes, scrub the timeline, or use Whole neck / Auto frame. The proportional camera widens for position changes and zooms in on nearby notes; the overview strip supports manual positioning. During an active exercise it follows completed notes and explicitly revealed hints, without exposing future answers. Respects Reduce Motion. Guitar Pro import is not part of this preview.
+
 ## Screenshots
 
 Actual app views rendered with demo data; no personal learning records are shown. Exercise screenshots use a consistent 1160 × 820 pt window and 125% text size. All exercises share the same fretboard proportions and drawing height limit.
@@ -20,6 +22,10 @@ Actual app views rendered with demo data; no personal learning records are shown
 ![Chord learning with shared exercise navigation](docs/screenshots/chord-learning-light.jpg)
 
 ![English interface](docs/screenshots/chord-learning-english.jpg)
+
+![Full fretboard animation](docs/screenshots/full-fretboard-light.jpg)
+
+[Full fretboard animation · MP4](docs/screenshots/full-fretboard-motion.mp4)
 
 ### Arpeggio practice
 

@@ -10,6 +10,8 @@
 
 ## 界面预览
 
+练习页标题栏的吉他按钮可打开 **21 品全指板**：播放内置动画演示、逐音前后、拖动进度，或切换「完整琴颈 / 自动取景」。镜头在大跨度换把位时拉远，再等比例收近；底部概览条可手动定位。实际练习中只跟随已完成的音和主动打开的提示，不提前显示答案，并遵循系统“减少动态效果”设置。本次预览尚未包含 Guitar Pro 导入。
+
 以下为实际 App 界面，使用演示数据，不包含个人学习记录。练习页面截图统一使用 1160 × 820 点窗口、125% 字号；所有练习共用同一指板比例和绘图高度上限。
 
 ### 和弦练习 · 135
@@ -17,6 +19,10 @@
 ![和弦学习与统一练习侧栏](docs/screenshots/chord-learning-light.jpg)
 
 ![英文界面](docs/screenshots/chord-learning-english.jpg)
+
+![全指板取景动画](docs/screenshots/full-fretboard-light.jpg)
+
+[全指板取景动画 · MP4](docs/screenshots/full-fretboard-motion.mp4)
 
 ### 琶音练习
 

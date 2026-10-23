@@ -198,5 +198,16 @@
   "自然音": "Natural notes",
   "全部音": "All notes",
   "{0}–{1} 品": "Frets {0}–{1}",
-  "六根弦": "All strings"
+  "六根弦": "All strings",
+  "全指板": "Full fretboard",
+  "完整琴颈": "Whole neck",
+  "自动取景": "Auto frame",
+  "跟随练习进度 · 显示参考弦位": "Practice progress · Reference fingering",
+  "动画演示 · 不计入学习记录": "Animation demo · Not scored",
+  "上一个音": "Previous note",
+  "下一个音": "Next note",
+  "暂停演示": "Pause demo",
+  "播放演示": "Play demo",
+  "演示进度": "Demo progress",
+  "全指板概览": "Fretboard overview"
 }
