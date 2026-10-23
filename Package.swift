@@ -9,6 +9,6 @@ let package = Package(
         .target(name: "FretNoteCore"),
         .executableTarget(name: "FretNoteApp", dependencies: ["FretNoteCore"], resources: [.process("Resources")]),
         .testTarget(name: "FretNoteCoreTests", dependencies: ["FretNoteCore"]),
-        .testTarget(name: "FretNoteAppTests", dependencies: ["FretNoteApp", "FretNoteCore"])
+        .testTarget(name: "FretNoteAppTests", dependencies: ["FretNoteApp", "FretNoteCore"], resources: [.copy("Fixtures")])
     ]
 )

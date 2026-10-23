@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "@coderline/alphatab": "1.8.4",
+    "esbuild": "0.28.2"
+  },
+  "private": true,
+  "scripts": {
+    "build": "esbuild importer.js --bundle --format=iife --global-name=FretNoteGP --minify --outfile=../../Sources/FretNoteApp/Resources/GuitarProImporter.js"
+  }
+}

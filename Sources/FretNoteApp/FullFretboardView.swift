@@ -1,5 +1,6 @@
 import SwiftUI
 import FretNoteCore
+import UniformTypeIdentifiers
 
 /// A photo-traced neck in one coordinate system. Only the camera moves.
 struct GuitarInstrumentCanvas: View, Animatable {
@@ -7,6 +8,8 @@ struct GuitarInstrumentCanvas: View, Animatable {
     var notes: [GuitarNote]
     var current: Int
     var dark: Bool
+    var activePositions: [GuitarNote]? = nil
+    var upcomingPositions: [GuitarNote]? = nil
     var animatableData: AnimatablePair<CGFloat, CGFloat> {
         get { AnimatablePair(camera.center, camera.width) }
         set { camera = FretboardCamera(center: newValue.first, width: newValue.second) }
@@ -53,6 +56,7 @@ struct GuitarInstrumentCanvas: View, Animatable {
             }
             context.draw(Text("\(fret)").font(.editorial(size: 10 / zoom)).foregroundColor(dark ? .white.opacity(0.7) : .black.opacity(0.65)), at: CGPoint(x: GuitarGeometry.noteX(fret), y: 85 + 17 / zoom))
         }
+        let active = activePositions ?? (notes.indices.contains(current) ? [notes[current]] : [])
         for string in 1...6 {
             let gauge: CGFloat = [0.55, 0.75, 1.05, 1.5, 2.0, 2.6][string - 1]
             var line = Path()
@@ -63,9 +67,8 @@ struct GuitarInstrumentCanvas: View, Animatable {
             context.stroke(line, with: .color(.black.opacity(0.8)), lineWidth: gauge + 1.3)
             context.stroke(line, with: .color(Color(white: string > 3 ? 0.65 : 0.87)), lineWidth: gauge)
             context.stroke(line, with: .color(.white.opacity(0.7)), lineWidth: max(0.3, gauge * 0.24))
-            if notes.indices.contains(current), notes[current].string == string,
-               (0...21).contains(notes[current].fret) {
-                let stop = GuitarGeometry.fretX(notes[current].fret)
+            if let note = active.first(where: { $0.string == string && (0...21).contains($0.fret) }) {
+                let stop = GuitarGeometry.fretX(note.fret)
                 var muted = Path()
                 muted.move(to: CGPoint(x: 0, y: GuitarGeometry.stringY(string, x: 0)))
                 muted.addLine(to: CGPoint(x: stop, y: GuitarGeometry.stringY(string, x: stop)))
@@ -80,12 +83,14 @@ struct GuitarInstrumentCanvas: View, Animatable {
         }
         // Marker diameter is bounded by physical string spacing, even in overview.
         // Text belongs outside the neck; it must never cover adjacent strings.
-        for index in min(notes.count, max(0, current - 2))..<min(notes.count, max(0, current + 3)) {
-            let note = notes[index]
+        let markers: [(GuitarNote, Int)] = activePositions.map { active in
+            (upcomingPositions ?? []).filter { !active.contains($0) }.map { ($0, 1) } + active.map { ($0, 0) }
+        } ?? (min(notes.count, max(0, current - 2))..<min(notes.count, max(0, current + 3))).map { (notes[$0], $0 - current) }
+        for (note, relative) in markers {
             guard (0...21).contains(note.fret), (1...6).contains(note.string) else { continue }
             let x = GuitarGeometry.noteX(note.fret), y = GuitarGeometry.stringY(note.string, x: x)
-            let radius = GuitarGeometry.markerRadius(x: x, zoom: zoom) * (index == current ? 1 : (index == current + 1 ? 0.8 : 0.65))
-            if index == current {
+            let radius = GuitarGeometry.markerRadius(x: x, zoom: zoom) * (relative == 0 ? 1 : (relative == 1 ? 0.8 : 0.65))
+            if relative == 0 && active.count == 1 {
                 let labelY = max(-100 - 18 / zoom, -visibleHeight / 2 + 22 / zoom)
                 var leader = Path(); leader.move(to: CGPoint(x: x, y: y - radius - 1))
                 leader.addLine(to: CGPoint(x: x, y: labelY + 17 / zoom))
@@ -95,7 +100,7 @@ struct GuitarInstrumentCanvas: View, Animatable {
                 context.draw(Text(note.fullName).font(.editorial(size: 16 / zoom, weight: .semibold)).foregroundColor(.black), at: CGPoint(x: x, y: labelY))
             }
             let dot = Path(ellipseIn: CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2))
-            context.fill(dot, with: .color(index == current ? accent : (index == current + 1 ? upcomingAccent : (index < current ? .white.opacity(0.35) : .white))))
+            context.fill(dot, with: .color(relative == 0 ? accent : (relative == 1 ? upcomingAccent : (relative < 0 ? .white.opacity(0.35) : .white))))
             context.stroke(dot, with: .color(.black), lineWidth: radius * 0.3)
         }
     }
@@ -112,6 +117,10 @@ struct FullFretboardView: View, Localizable {
     var live = false
     var framingNotes: [GuitarNote]? = nil
     var prompt: String? = nil
+    @State private var importedScore: GuitarProScore?
+    @State private var importing = false
+    @State private var loading = false
+    @State private var importError: String?
     @State private var step = 0
     @State private var playing = false
     @State private var follow = true
@@ -120,10 +129,34 @@ struct FullFretboardView: View, Localizable {
     private var palette: AppPalette { AppPalette(scheme: scheme) }
     private var animation: Animation? { reduceMotion ? nil : .easeInOut(duration: FretboardPlaybackTimeline.cameraAnimation) }
     var body: some View {
+        Group {
+            if let importedScore {
+                GuitarProPlaybackView(score: importedScore) { self.importedScore = nil }
+            } else { demoBody }
+        }
+        .fileImporter(isPresented: $importing, allowedContentTypes: ["gp3", "gp4", "gp5", "gpx", "gp"].compactMap { UTType(filenameExtension: $0) }, allowsMultipleSelection: false) { result in
+            guard case .success(let urls) = result, let url = urls.first else { return }
+            playing = false
+            loading = true
+            Task {
+                let access = url.startAccessingSecurityScopedResource()
+                defer { if access { url.stopAccessingSecurityScopedResource() }; loading = false }
+                do { importedScore = try await Task.detached(priority: .userInitiated) { try GuitarProScore.load(url) }.value }
+                catch { importError = error.localizedDescription }
+            }
+        }
+        .alert(L("无法导入"), isPresented: Binding(get: { importError != nil }, set: { if !$0 { importError = nil } })) {
+            Button(L("好")) { importError = nil }
+        } message: { Text(L(importError ?? "")) }
+    }
+    private var demoBody: some View {
         VStack(spacing: 16) {
             HStack {
                 Text(L("全指板")).font(.editorial(size: 20 * scale))
                 Spacer()
+                if !live {
+                    Button(L(loading ? "正在导入…" : "导入 Guitar Pro")) { importing = true }.disabled(loading)
+                }
                 Button(L("完整琴颈")) { follow = false; camera = .overview }
                 Button(L("自动取景")) { follow = true; updateCamera() }
                     .buttonStyle(EditorialButtonStyle(prominent: follow))

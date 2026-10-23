@@ -6,3 +6,5 @@ dist/
 
 # Locally supplied commercial fonts; never publish or redistribute.
 Sources/FretNoteApp/Resources/LocalFonts/
+
+node_modules/

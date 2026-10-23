@@ -11,9 +11,11 @@ Connect a guitar through an audio interface, read the note, and play it. FretNot
 
 [Download for macOS](https://github.com/lele94218/FretNote/releases/latest) · [Report an issue](https://github.com/lele94218/FretNote/issues)
 
-The guitar button in each practice header opens the **full 21-fret instrument**. Play the built-in animation demo, step through notes, scrub the timeline, or use Whole neck / Auto frame. The proportional camera widens for position changes and zooms in on nearby notes; the overview strip supports manual positioning. During an active exercise it frames the entire note set once and only marks completed notes and explicitly revealed hints, without exposing future answers. Respects Reduce Motion. Guitar Pro import is not part of this preview.
+The guitar button in each practice header opens the **full 21-fret instrument**. Play the built-in animation demo, step through notes, scrub the timeline, or use Whole neck / Auto frame. The proportional camera widens for position changes and zooms in on nearby notes; the overview strip supports manual positioning. During an active exercise it frames the entire note set once and only marks completed notes and explicitly revealed hints, without exposing future answers. Respects Reduce Motion. Use **Import Guitar Pro** in the idle full-fretboard window to open local GP3/4/5, GPX or GP files. Select a guitar track, bar range, 25–100% speed and looping. Silent fretboard playback follows score timing, rests, repeats and tempo changes; camera cues never delay the music timeline. Simultaneous notes are shown together, with bend, slide, hammer/pull-off and tie indicators. Currently accepts standard-tuned six-string tracks without a capo, up to fret 21. Score audio synthesis and performance scoring are not yet included. Parsing stays offline and does not affect learning records. See [parser dependencies and regeneration](tools/guitar-pro/README.md).
 
 ## Screenshots
+
+![Guitar Pro import — original test score](docs/screenshots/guitar-pro-import.jpg)
 
 Actual app views rendered with demo data; no personal learning records are shown. Exercise screenshots use a consistent 1160 × 820 pt window and 125% text size. All exercises share the same fretboard proportions and drawing height limit.
 
@@ -141,7 +143,7 @@ Older aggregate statistics are preserved, but historical session details cannot 
 
 ## Build from source
 
-Requires macOS 13+ and a Swift 5.9+ toolchain (Xcode / Command Line Tools). No third-party code dependencies. The bundled Bravura notation font works offline without system installation.
+Requires macOS 13+ and a Swift 5.9+ toolchain (Xcode / Command Line Tools). Guitar Pro import bundles alphaTab (MPL-2.0); no Node or Python installation is needed. The bundled Bravura notation font works offline without system installation.
 
 ```bash
 git clone https://github.com/lele94218/FretNote.git
@@ -186,3 +188,5 @@ Future directions include real-guitar regression samples, separate sight-reading
 Inter is distributed under the [SIL Open Font License 1.1](Sources/FretNoteApp/Resources/Inter-LICENSE.txt). Locally supplied commercial fonts retain their original terms and must not be included in public packages.
 
 Project code is released under the [MIT License](LICENSE). The bundled Bravura font and associated resources retain their upstream license; see [Bravura-LICENSE.txt](Sources/FretNoteApp/Resources/Bravura-LICENSE.txt).
+
+Guitar Pro parsing uses [alphaTab 1.8.4](https://alphatab.net/) under its [MPL-2.0 license](Sources/FretNoteApp/Resources/alphaTab-LICENSE.txt).
