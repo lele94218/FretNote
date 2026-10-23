@@ -21,7 +21,10 @@ struct GuitarInstrumentCanvas: View, Animatable {
         }.clipped().accessibilityHidden(true)
     }
     private func drawGuitar(_ context: inout GraphicsContext, zoom: CGFloat, visibleHeight: CGFloat) {
-        let end = GuitarGeometry.fretX(21) + 22
+        let accent = Color(red: 0.20, green: 0.85, blue: 0.96)
+        for layer in NeckArtwork.bodyLayers {
+            context.fill(layer.path, with: .color(layer.color))
+        }
         context.drawLayer { artwork in
             artwork.clip(to: NeckArtwork.outline)
             for layer in NeckArtwork.layers {
@@ -36,8 +39,11 @@ struct GuitarInstrumentCanvas: View, Animatable {
             context.fill(Path(ellipseIn: ring.insetBy(dx: 4, dy: 4)), with: .color(Color(white: 0.25)))
         }
         for fret in 1...21 where zoom >= 1 || [1, 3, 5, 7, 9, 12, 15, 17, 19, 21].contains(fret) {
-            let half = 38 + GuitarGeometry.fretX(fret) / end * 12
-            context.draw(Text("\(fret)").font(.editorial(size: 10 / zoom)).foregroundColor(dark ? .white.opacity(0.7) : .black.opacity(0.65)), at: CGPoint(x: GuitarGeometry.noteX(fret), y: half + 17 / zoom))
+            if fret >= 12 {
+                let rect = CGRect(x: GuitarGeometry.noteX(fret) - 9 / zoom, y: 85 + 10 / zoom, width: 18 / zoom, height: 14 / zoom)
+                context.fill(Path(roundedRect: rect, cornerRadius: 2 / zoom), with: .color(dark ? Color(white: 0.07) : .white))
+            }
+            context.draw(Text("\(fret)").font(.editorial(size: 10 / zoom)).foregroundColor(dark ? .white.opacity(0.7) : .black.opacity(0.65)), at: CGPoint(x: GuitarGeometry.noteX(fret), y: 85 + 17 / zoom))
         }
         for string in 1...6 {
             let gauge: CGFloat = [0.55, 0.75, 1.05, 1.5, 2.0, 2.6][string - 1]
@@ -45,7 +51,7 @@ struct GuitarInstrumentCanvas: View, Animatable {
             line.move(to: NeckArtwork.tuningPost(string))
             line.addLine(to: CGPoint(x: -40, y: GuitarGeometry.stringY(string, x: 0)))
             line.addLine(to: CGPoint(x: 0, y: GuitarGeometry.stringY(string, x: 0)))
-            line.addLine(to: CGPoint(x: end - 8, y: GuitarGeometry.stringY(string, x: end - 8)))
+            line.addLine(to: CGPoint(x: GuitarGeometry.scaleLength, y: GuitarGeometry.stringY(string, x: GuitarGeometry.scaleLength)))
             context.stroke(line, with: .color(.black.opacity(0.8)), lineWidth: gauge + 1.3)
             context.stroke(line, with: .color(Color(white: string > 3 ? 0.65 : 0.87)), lineWidth: gauge)
             context.stroke(line, with: .color(.white.opacity(0.7)), lineWidth: max(0.3, gauge * 0.24))
@@ -62,17 +68,17 @@ struct GuitarInstrumentCanvas: View, Animatable {
                 let left = max(0, x - 30), right = max(0, x + 30)
                 segment.move(to: CGPoint(x: left, y: GuitarGeometry.stringY(note.string, x: left)))
                 segment.addLine(to: CGPoint(x: right, y: GuitarGeometry.stringY(note.string, x: right)))
-                context.stroke(segment, with: .color(.white), lineWidth: 2 / zoom)
-                let labelY = max(-100 - 18 / zoom, -visibleHeight / 2 + 16 / zoom)
+                context.stroke(segment, with: .color(accent), lineWidth: 2 / zoom)
+                let labelY = max(-100 - 18 / zoom, -visibleHeight / 2 + 22 / zoom)
                 var leader = Path(); leader.move(to: CGPoint(x: x, y: y - radius - 1))
-                leader.addLine(to: CGPoint(x: x, y: labelY + 13 / zoom))
-                context.stroke(leader, with: .color(dark ? .white.opacity(0.55) : .gray), style: StrokeStyle(lineWidth: 0.7 / zoom, dash: [2 / zoom, 3 / zoom]))
-                let plate = CGRect(x: x - 27 / zoom, y: labelY - 12 / zoom, width: 54 / zoom, height: 24 / zoom)
-                context.fill(Path(roundedRect: plate, cornerRadius: 3 / zoom), with: .color(dark ? .white : .black))
-                context.draw(Text(note.fullName).font(.editorial(size: 13 / zoom, weight: .medium)).foregroundColor(dark ? .black : .white), at: CGPoint(x: x, y: labelY))
+                leader.addLine(to: CGPoint(x: x, y: labelY + 17 / zoom))
+                context.stroke(leader, with: .color(accent.opacity(0.85)), style: StrokeStyle(lineWidth: 1 / zoom, dash: [2 / zoom, 3 / zoom]))
+                let plate = CGRect(x: x - 34 / zoom, y: labelY - 16 / zoom, width: 68 / zoom, height: 32 / zoom)
+                context.fill(Path(roundedRect: plate, cornerRadius: 3 / zoom), with: .color(accent))
+                context.draw(Text(note.fullName).font(.editorial(size: 16 / zoom, weight: .semibold)).foregroundColor(.black), at: CGPoint(x: x, y: labelY))
             }
             let dot = Path(ellipseIn: CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2))
-            context.fill(dot, with: .color(index < current ? .white.opacity(0.35) : .white))
+            context.fill(dot, with: .color(index == current ? accent : (index < current ? .white.opacity(0.35) : .white)))
             context.stroke(dot, with: .color(.black), lineWidth: radius * 0.3)
         }
     }

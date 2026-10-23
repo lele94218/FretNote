@@ -14,19 +14,22 @@ enum NeckArtwork {
         let outline: [[Double]]
         let layers: [EncodedLayer]
     }
-    private static let artwork: EncodedArtwork? = {
-        guard let url = Bundle.module.url(forResource: "NeckArtwork", withExtension: "json"),
+    private static func load(_ name: String) -> EncodedArtwork? {
+        guard let url = Bundle.module.url(forResource: name, withExtension: "json"),
               let data = try? Data(contentsOf: url),
               let encoded = try? JSONDecoder().decode(EncodedArtwork.self, from: data) else { return nil }
         return encoded
-    }()
+    }
+    private static let artwork = load("NeckArtwork")
     static let outline = Path { p in
         guard let points = artwork?.outline, let first = points.first else { return }
         p.move(to: CGPoint(x: first[0], y: first[1]))
         for point in points.dropFirst() { p.addLine(to: CGPoint(x: point[0], y: point[1])) }
         p.closeSubpath()
     }
-    static let layers: [Layer] = {
+    static let layers = makeLayers(artwork)
+    static let bodyLayers = makeLayers(load("BodyArtwork"))
+    private static func makeLayers(_ artwork: EncodedArtwork?) -> [Layer] {
         (artwork?.layers ?? []).map { layer in
             let path = Path { p in
                 for contour in layer.contours where contour.count >= 8 {
@@ -43,7 +46,7 @@ enum NeckArtwork {
                                                    green: layer.color[1] / 255,
                                                    blue: layer.color[2] / 255))
         }
-    }()
+    }
     static func tuningPost(_ string: Int) -> CGPoint {
         // Bore centers measured from the same photo as the traced outline.
         let centers: [(CGFloat, CGFloat)] = [(1010, 88), (990, 158), (968, 228),

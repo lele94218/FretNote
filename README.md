@@ -23,7 +23,7 @@ Actual app views rendered with demo data; no personal learning records are shown
 
 ![English interface](docs/screenshots/chord-learning-english.jpg)
 
-Whole neck shows only the headstock and 21-fret neck, using photo-traced vector artwork without the guitar body. Note markers scale with string spacing; note names stay outside the neck to keep all six strings readable.
+Whole neck shows the headstock and 21-fret neck with a cropped body shoulder, using photo-traced vector artwork. A larger cyan dot and matching label highlight the current note. Note markers scale with string spacing; note names stay outside the neck to keep all six strings readable.
 
 ![Full fretboard animation](docs/screenshots/full-fretboard-light.jpg)
 

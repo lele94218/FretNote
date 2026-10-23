@@ -22,3 +22,16 @@ svgpathtools 1.8.0. Install these in a local environment under `.build/`, then r
 `python scripts/trace-neck.py /path/to/2000x2000-source.jpg`. The generated resource
 contains a separately traced outer clipping contour and color Bézier layers;
 no image processing or network access happens at app runtime.
+
+## Cropped body shoulder
+
+BodyArtwork.json is traced with `scripts/trace-body.py` from this front-facing
+product photograph (retrieved 2026-10-23):
+
+- https://www.jpmusical.com/products/guitarra-electrica-fender-0140510500-player-ii-strat-rw-3ts
+- https://www.jpmusical.com/cdn/shop/files/0140510500PlayerIIStratocaster_RosewoodFingerboard_3-ColorSunburst_01_1000x.png?v=1721684455
+
+The original transparent background is preserved. The body finish is neutralized
+and its original neck removed, so our calibrated 21-fret neck remains the source
+of note positions. The camera crops before the bridge; the entire body is never
+shown in Whole neck. The source photo remains outside the app and repository.
