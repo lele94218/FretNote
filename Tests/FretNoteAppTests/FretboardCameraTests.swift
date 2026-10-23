@@ -27,6 +27,22 @@ final class FretboardCameraTests: XCTestCase {
         XCTAssertGreaterThan(wide.width, close.width)
     }
 
+    func testMarkersStayOnStringsWithoutCoveringNeighbours() {
+        for fret in 1...21 {
+            let x = GuitarGeometry.noteX(fret)
+            for string in 1...6 {
+                let nut = GuitarGeometry.stringY(string, x: 0)
+                let bridge = GuitarGeometry.stringY(string, x: GuitarGeometry.scaleLength)
+                XCTAssertEqual(GuitarGeometry.stringY(string, x: x), nut + (bridge - nut) * x / GuitarGeometry.scaleLength, accuracy: 0.0001)
+            }
+            let gap = GuitarGeometry.stringY(2, x: x) - GuitarGeometry.stringY(1, x: x)
+            for zoom: CGFloat in [0.3, 0.5, 1, 2, 3] {
+                // Includes the stroke on both sides of the marker.
+                XCTAssertLessThan(GuitarGeometry.markerRadius(x: x, zoom: zoom) * 2.3, gap)
+            }
+        }
+    }
+
     @MainActor
     func testRenderCamera() async throws {
         guard let path = ProcessInfo.processInfo.environment["FRETNOTE_CAMERA_SNAPSHOTS"] else { return }

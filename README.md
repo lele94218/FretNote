@@ -23,6 +23,8 @@ Actual app views rendered with demo data; no personal learning records are shown
 
 ![English interface](docs/screenshots/chord-learning-english.jpg)
 
+Note markers scale with string spacing; note names stay outside the neck to keep all six strings readable.
+
 ![Full fretboard animation](docs/screenshots/full-fretboard-light.jpg)
 
 [Full fretboard animation · MP4](docs/screenshots/full-fretboard-motion.mp4)

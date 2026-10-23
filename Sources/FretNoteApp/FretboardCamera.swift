@@ -4,7 +4,7 @@ import FretNoteCore
 struct FretboardCamera: Equatable {
     var center: CGFloat
     var width: CGFloat
-    static let overview = FretboardCamera(center: 560, width: 1600)
+    static let overview = FretboardCamera(center: 590, width: 1900)
     static func following(_ notes: [GuitarNote], index: Int) -> FretboardCamera {
         guard notes.indices.contains(index) else { return .overview }
         let upcoming = notes[index..<min(notes.count, index + 3)]
@@ -28,8 +28,12 @@ enum GuitarGeometry {
         fret <= 0 ? -28 : (fretX(fret - 1) + fretX(fret)) / 2
     }
     static func stringY(_ string: Int, x: CGFloat) -> CGFloat {
-        let spread = 62 + min(1, max(0, x / fretX(21))) * 28
+        let spread = 62 + min(1, max(0, x / scaleLength)) * 28
         return (CGFloat(string) - 3.5) * spread / 5
+    }
+    static func markerRadius(x: CGFloat, zoom: CGFloat) -> CGFloat {
+        let gap = stringY(2, x: x) - stringY(1, x: x)
+        return min(9 / max(zoom, 0.001), gap * 0.30)
     }
     static let demo: [GuitarNote] = [(6, 0), (6, 3), (5, 2), (4, 2), (3, 5), (2, 5),
         (1, 5), (1, 8), (2, 10), (1, 12), (2, 13), (1, 15), (1, 17), (1, 19), (1, 21),
