@@ -2,181 +2,70 @@
 
 [English](README.md) · **简体中文**
 
-[下载 macOS 版](https://github.com/lele94218/FretNote/releases/latest) · [反馈问题](https://github.com/lele94218/FretNote/issues)
+[![构建](https://github.com/lele94218/FretNote/actions/workflows/build.yml/badge.svg)](https://github.com/lele94218/FretNote/actions/workflows/build.yml)
+[![版本](https://img.shields.io/github/v/release/lele94218/FretNote)](https://github.com/lele94218/FretNote/releases/latest)
+[![MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
 
-在 macOS 本机，通过声卡听电吉他单音，练指板、音名和五线谱。
+在 Mac 上熟悉吉他指板、练习识谱，跟着 Guitar Pro 乐谱演奏。原生 macOS 应用，音频仅在本机处理。
 
-界面采用黑白配色、细分隔线和简洁控件。“FretNote → 设置…”（`⌘,`）中的“外观”支持浅色、深色和跟随系统；“字号”可在 100%–175% 之间调节，默认 125%。文字按所选字号显示，五线谱和指板按窗口可用空间等比例适配，主题和字号在退出后保留。五线谱用箭头标记当前音，已完成的音变灰；判定通过文字和符号显示。下拉选择使用 macOS 原生菜单：紧凑行高、系统选中标记、方向键选择与 Esc 关闭；菜单字号随界面设置调整，尺寸由系统按内容计算。谱面与指板保持真实比例，根据窗口宽高统一缩放，全部音符与练习把位保持可见，无需横向或纵向滚动。侧栏可拖动调整宽度或通过 `⌃⌘S` 隐藏，字号放大不会同比扩大侧栏。指板品距按十二平均律逐品缩短，并显示常见品位标记。
+**[下载](https://github.com/lele94218/FretNote/releases/latest)** · [反馈问题](https://github.com/lele94218/FretNote/issues)
 
-## 界面预览
+## 动态预览
 
-![Guitar Pro import — original test score](docs/screenshots/guitar-pro-import.jpg)
+![指板跟谱、音级标记、推弦与揉弦动态演示](docs/demo/fretboard-player.gif)
 
-左侧主导航新增 **指板跟谱**，直接进入 21 品全指板与 Guitar Pro 播放。导入的曲目在标题下方以紧凑的纵向文件列表展示，每行包含文件名、选中状态和关闭按钮；文件较多时原地翻页，不增加页面纵向滚动。已打开曲目及当前标签保存在本机，重启后恢复，无需重复导入，也不依赖原文件位置；退出时若停留在跟谱页，下次仍打开该页。关闭最后一个窗口会退出整个应用。练习页标题栏的吉他按钮也可打开全指板：播放内置动画演示、逐音前后、拖动进度，或切换「完整琴颈 / 自动取景」。演示按固定节拍播放，镜头在下一个音前 0.7 秒开始移动，并在其开始前停稳，不增加等待或改变音符时长。移动时保留当前音、下一个音和琴弦高亮；相近把位复用当前画面。实际练习预先框住整组音，过程中不逐音移动镜头；底部概览条可手动定位。实际练习中只标记已完成的音和主动打开的提示，不提前显示答案，并遵循系统“减少动态效果”设置。「完整琴颈」显示琴头与 21 品琴颈，并在右侧露出部分琴体；外观由实琴照片转成矢量路径。琴弦、音符和推弦提示采用 Rocksmith 弦色：6→1 弦依次为红、黄、蓝、橙、绿、紫。当前音为实心圆加白色外圈，下一个音为空心彩色圆环；从按弦品位到琴桥的发声段更亮。矢量轮廓经过平滑处理，品位标记直接绘制为正圆，第 12 品为双圆点。音符定位点按弦距缩放，音名显示在指板外，缩小后仍可区分所在琴弦。支持在非练习状态的全指板窗口点击「导入 Guitar Pro」，读取本地 GP3/4/5、GPX、GP 文件。选择音轨、小节范围、25–100% 速度及循环后，可按谱子的时值、休止、反复和变速进行 MIDI 试听与指板跟谱。内置开源 TinySoundFont 合成器和 Sonivox 音色库，支持力度、延音与推弦发声，减速不变调，可调音量、暂停续播与循环。指板跟随音频采样时钟，镜头提前移动，不改变节拍。下方按音轨分行显示小节方格，仅高亮当前小节，不显示格内进度线。点击可播放的吉他行或方格可切换音轨并跳转，鼓、Bass 等其他音轨同时播放；每行扬声器按钮可独立静音/恢复，不中断播放。音轨选择统一使用下方方格，移除上方音轨下拉菜单。长曲目横向展开，音轨过多时在固定高度区域内翻组，不增加页面纵向滚动。可开关节拍器，与乐曲共用音频时钟，跟随拍号、变速、反复和减速，每小节第一拍重音。旧版缓存缺少拍点时，可点击「启用节拍器…」选择原谱补齐，保留原标签。新导入的原谱也在本机归档，解析器升级时自动重建缓存，保留已打开标签。各音轨独立提取播放事件，并转换虚拟 MIDI 通道，避免普通音丢失或其他轨道无声。本机自动分析调中心，并按四小节乐句推测音阶，显示音阶名及“推测”标记；默认仍显示实琴指板和音名；打开「音级标记」开关后，直接在原有实琴指板上叠加高对比圆形标签，显示当前四品把位整组音阶的 1、♭3、5 等音级，当前音与下一个音保持高亮，音阶外音用 · 标记。音符不足时显示“音阶未确定”。此分析基于音高分布，不是确定的和声结论，也不能可靠跟随转调。当前小节需要弹奏的全部弦位以较淡的对应弦色圆点常驻显示；自动取景包含整小节。支持同时显示多个音，标示推弦、滑音、击勾弦和延音。推弦在琴弦外显示起始音→目标音、½/full 幅度及随 MIDI 音高变化的进度条；回落时显示向下箭头，琴弦随实际播放音高向指板内侧弯曲，回落时恢复；揉弦根据实际 MIDI 音高驱动琴弦和圆点往复，支持在推弦音高上叠加揉弦；旧曲目自动从已归档原谱补齐揉弦标记。推弦画面在相邻 MIDI 音高点间连续插值，慢速时也平滑移动，不增加播放延迟；圆形按弦标记随弦移动，品位不变，弦枕和琴桥固定。当前仅显示标准调弦、无变调夹、最高 21 品的六弦吉他音轨；所有音轨混合播放，所选吉他音轨控制指板跟随；暂不对导入曲目进行演奏判定。播放前在本机准备音频，按所选速度最长 20 分钟。文件仅在本机解析，不上传、不计入学习记录。
+使用原创练习谱和应用指板组件生成。GIF 可在页面直接播放，无声音。[下载带 MIDI 声音的视频](https://github.com/lele94218/FretNote/releases/download/v0.4.0/FretNote-v0.4.0-demo.mp4) · [试用演示乐谱](docs/demo/fretnote-demo.gp)
 
-以下为实际 App 界面，使用演示数据，不包含个人学习记录。练习页面截图统一使用 1160 × 820 点窗口、125% 字号；所有练习共用同一指板比例和绘图高度上限。
+## 核心功能
 
-### 和弦练习 · 135
+- **指板与识谱练习**：通过声卡或麦克风弹出指定音、短旋律，获得音高反馈并保存学习记录。
+- **和弦与琶音**：先看指型学习，再练习三和弦和七和弦三音骨架。琶音按顺序判定；和弦多音识别目前为试用功能。
+- **Guitar Pro 跟谱**：导入 GP3/4/5、GPX、GP 文件，在 21 品实琴指板上跟随演奏，支持小节循环与最低 25% 的减速不变调播放。
+- **多轨播放**：吉他、Bass、鼓独立静音，小节方格导航与同步节拍器。
+- **演奏动画**：推弦、回落、揉弦及推弦叠加揉弦。可开启当前把位的完整音阶音级标记，默认显示音名。
+- **Mac 使用体验**：中英文、深浅模式、可调字号；文件列表保存在本机，下次打开自动恢复。
 
-![和弦学习与统一练习侧栏](docs/screenshots/chord-learning-light.jpg)
+<details>
+<summary>更多界面预览</summary>
 
-![英文界面](docs/screenshots/chord-learning-english.jpg)
+![和弦学习](docs/screenshots/chord-learning-light.jpg)
 
-![全指板取景动画](docs/screenshots/full-fretboard-light.jpg)
+![五线谱找音](docs/screenshots/sight-reading-light.jpg)
 
-[全指板取景动画 · MP4](docs/screenshots/full-fretboard-motion.mp4)
+</details>
 
-### 琶音练习
+## 安装
 
-![琶音指板、音级、音名与弦品位置](docs/screenshots/arpeggio-learning-light.jpg)
+在 [Releases](https://github.com/lele94218/FretNote/releases/latest) 下载 **macOS arm64 ZIP**，解压后将 `FretNote.app` 放入“应用程序”。
 
-### 琶音练习 · 输入判定
+- 需要 Apple Silicon（M 系列）Mac、macOS 13 或更新版本。
+- 发布包采用临时签名，未经 Apple 公证。如首次打开被拦截，请确认下载来源后按 [Apple 的说明](https://support.apple.com/102445) 操作，或从源码构建。
+- 暂无 Intel 发布包，Intel 构建尚未验证。
 
-![琶音按顺序判定，指型默认隐藏](docs/screenshots/arpeggio-practice-light.jpg)
+## 快速开始
 
-### 和弦练习 · 137 · 深色
+**练习找音：**连接吉他，在设置中选择声卡及输入通道，开始监听，再选择练习。建议使用干净音色，并静音未使用的琴弦。
 
-![137 和弦学习深色界面](docs/screenshots/shell-learning-dark.jpg)
+**跟谱播放：**进入「指板跟谱」，导入 Guitar Pro 文件，点击下方音轨方格选择吉他轨，再点击播放。开启「音级标记」可查看当前把位的音阶标签。
 
-### 五线谱找音 · 浅色
+音高检测只能验证声音，不能确认实际弦品。音阶名称是自动推测结果。导入曲目的指板显示限标准调弦、无变调夹、最高 21 品的六弦吉他，跟谱播放暂不进行演奏判分。文件与学习记录均保存在本机。
 
-![五线谱找音与六弦指板](docs/screenshots/sight-reading-light.jpg)
+## 开发
 
-### 旋律与把位提示 · 深色
+需要 macOS、Xcode Command Line Tools，以及 Swift 5.9 或更新版本。
 
-![短旋律练习与当前音的指板位置提示](docs/screenshots/fretboard-dark.jpg)
-
-### 学习记录
-
-![累计练习统计与每组学习记录](docs/screenshots/learning-history.jpg)
-
-主练习页面参考 [SSENSE](https://www.ssense.com/en-us) 的文字导航、黑白层次与规整网格，使用下划线选中态和直角按钮；保留原生 macOS 菜单、可调字号、指板比例和无需上下滚动的布局。本机版本可使用用户提供的 Favorit SSENSE Inter / Regular，中文使用苹方。公开构建内置 OFL 许可的 Inter 作为后备字体，仓库不包含 SSENSE 商业字体。五线谱继续使用 Bravura。
-
-在 **设置 → 外观 → 语言 / Language** 中切换 **简体中文 / English**。选择会保存并立即应用到控件、练习提示和已有学习记录，不会重置练习。
-
-## 下载与安装
-
-从 [GitHub Releases](https://github.com/lele94218/FretNote/releases/latest) 下载 `FretNote-v0.3.1-macOS-arm64.zip`，解压后将 `FretNote.app` 拖入“应用程序”。需要 **Apple Silicon（M 系列）Mac、macOS 13 或更新版本**。当前发布包不支持 Intel；Intel 用户可尝试从源码构建，尚未验证。
-
-应用目前只有中文界面；文档提供中英文。发布包采用临时签名，尚未通过 Apple Developer ID 签名和公证，macOS 可能阻止首次打开。仅在确认来源后按 [Apple 的说明](https://support.apple.com/102445)处理，或自行从源码构建。
-
-## 和弦与琶音：学习 → 练习
-
-以下为当前源码／本机开发版功能；v0.3.1 下载包仍为旧版单指型浏览。
-
-侧栏选择「和弦练习」或「琶音练习」，只选**根音、类别**。学习页自动展示弦组、音级排列、根音所在弦、琶音路径和不同位置，按品位分页，不需要逐项配置或上下滚动。支持 135 大三／小三／增三／减三，以及 137 大七／属七／小七。指型使用 1–21 品、自动显示完整跨度，当前不含空弦。
-
-看完点击「开始练习」，或切换顶部「学习／练习」。根音与类别保留，App 自动安排最多 10 个不同音高组合。题目给出音级、根音弦、音区与范围，指型默认隐藏；可提示、跳过或结束。下一题前先止音。返回学习立即停止音频采集。
-
-- **琶音**：按顺序检查三个实际音高及八度。弹错时留在当前音，三个音完成才算一题。
-- **和弦**：使用独立多音检测，检查同时存在的音高组合及八度。短扫弦后需保持延音；三个分离单音不能累加通过。此检测为**试用**：已做合成信号测试，尚未完成真实声卡吉他的准确率与延迟验证。使用干净音色、静音未用琴弦；弱基音、失真及额外八度重音存在识别限制。
-
-学习浏览不评分。演奏练习按完整三音题保存，区分和弦／琶音、135／137，记录提示、跳过与首次正确；不会改写旧单音熟练度。没有完成的当前题不计分，已完成题立即保存。音频只能验证声音，不能确认实际按了哪根弦或哪个品。
-
-## 开始使用
-
-1. 打开 `FretNote.app`。
-2. 吉他接声卡，使用标准调弦（六弦到一弦：E2 A2 D3 G3 B3 E4）、干净音色。
-3. 点击右上角设置按钮，在“音频输入”选择声卡及吉他所在的输入通道，例如 Scarlett 2i2 的 Input 1。
-4. 点击“开始监听”，首次使用允许麦克风权限。macOS 对声卡输入同样需要这项权限。
-5. 返回主窗口，先弹几下，确认电平有反应、识别到的音正确，再点击“开始练习”。
-
-主界面采用单屏布局：输入和练习操作固定在顶部，谱面与指板共享中间可用空间，底部显示本组成绩。“学习记录”按钮打开详细记录；设置分为“外观”和“音频”两个页签，均不需要上下滚动。最小窗口为 1040 × 740 点。原有单音练习的菜单栏快捷键：`⌘Return` 开始／结束、`⇧⌘H` 提示、`⌘→` 跳过、`⇧⌘I` 开启／停止监听。完成弹窗可按 Return 关闭。
-
-原有单音练习每组 20 个音，可以提前结束。弹错后可以继续尝试；提示和跳过会降低该音的熟练度，后续更常出现。
-
-五线谱找音和短旋律默认练习连续四个品格，只需选择起始品：例如起始第 5 品，范围自动为第 5–8 品。初始为第 1–4 品。按 21 品电吉他设置上限，默认四品把位最晚从第 18 品开始（18–21 品），自定义范围可选到第 21 品，指板不会显示第 22 品及以上。勾选“自定义范围”后可分别设置起始品、结束品，也可从 0（空弦）开始；关闭自定义即恢复四品范围。
-
-## 原有单音练习
-
-- **音名找音**：琴弦可多选（至少一根），每题明确指定其中一根，多选时相邻题切换琴弦；在题目指定弦的空弦到第 21 品之间找 G 等音名，不限制把位。同一根弦上不同八度的同名音均可通过；提示只给出一个参考位置。
-- **五线谱找音**：只限制把位，不限制琴弦，所选品位范围内六根弦上的音都参与出题（可选只练自然音）。可以关闭音名辅助，下方常驻显示当前吉他把位；点击“提示位置”后才显示一个参考答案位置。
-- **短旋律**：在指定品位范围内弹 3–5 个音，逐音验证音高和顺序。每组最后一题会缩短以凑齐 20 音。五线谱下常驻六弦指板图，采用黑色琴颈、金属品丝和由细到粗的六根弦；一弦在上、六弦在下，不显示左侧弦号和调弦标签。下方短线标出练习范围，保留品号；相邻品用于定位。点击“提示位置”后才标出当前音的参考位置。空弦显示在琴枕左侧。
-
-五线谱使用吉他常用的八度移调高音谱表：**谱面比实际声音高一个八度**，谱号下的小 8 表示实际发声低八度。输入区显示的是实际音高，如一弦三品显示 G4；谱面对应 G5。
-
-## 判定与边界
-
-- 原有三种练习使用单音检测；当前源码版新增和弦多音检测试用。暂不评估节奏、推弦或滑音。
-- 五线谱和旋律验证实际音高及八度，音名模式接受指定弦可弹范围内的同名音；无法从音高可靠区分同音的不同弦/品位。请自行遵守题目位置要求。
-- 需连续检测到稳定音高，允许约 ±40 音分偏差。模糊信号或噪声不计为答错。
-- 延音不会持续重复答题。重复同音时轻闷弦再拨，更容易识别；强烈的新起音也可重新触发。
-- 避免同时振动多根弦，关闭失真、混响和延迟。高泛音、严重失真或多音输入仍可能造成误判。
-- 噪声门默认 −45 dBFS。小音量不识别时可停止监听，调低噪声门后重新开启；若输入削波则降低声卡增益。
-- 设备拔插或采样率变化后会停止监听，请刷新设备并重新开始。
-- 第一版未经过真人吉他输入准确率评估；自动测试使用合成信号，不能代替你的实际声卡试用。
-
-## 本地数据
-
-音频仅在内存中处理，不录音、不上传，无网络依赖。
-
-学习记录保存于：
-
-```text
-~/Library/Application Support/FretNote/progress.json
-```
-
-“学习记录”提供累计练习音符数、首次正确率、平均找音时间，以及按时间倒序的练习历史。每组保存日期、模式、琴弦或把位范围、自然音设置、完成音符数、正确率、平均用时、提示和跳过次数；完成每个音后自动落盘，提前结束也保留，空练习不记录。历史与优先复习列表均分页显示，无需滚动，支持深浅色和字号设置。旧版累计数据自动兼容，旧练习的日期和分组无法补回。
-
-熟练度记录以“弦 + 品位”为单位，包含首次正确率、耗时、提示次数及下次复习时间。不同练习模式暂时共享熟练度。复习采用加权抽题，尚未到期的音也可能出现。读取失败时保留原文件并停止覆盖，界面会提示错误。
-
-## 开发与打包
-
-需要 macOS 13+、Xcode / Swift 5.9+。Guitar Pro 导入使用内置 alphaTab（MPL-2.0），无需额外安装 Node 或 Python。内置 Bravura 乐谱字体（SIL Open Font License 1.1），离线可用，无需安装系统字体。
-
-```bash
+```sh
+git clone https://github.com/lele94218/FretNote.git
+cd FretNote
 swift test
 bash scripts/build-app.sh
-open "$HOME/Applications/FretNote.app"
+open ~/Applications/FretNote.app
 ```
 
-请使用打包后的 `.app` 进行音频测试，确保应用身份和麦克风用途说明正确。构建产物为本机架构，采用本机临时签名，未进行 Developer ID 公证。更新签名后，macOS 可能要求重新授权麦克风。
+解析器和音色库已随项目提供，只有重建 Guitar Pro 适配器时才需要 Node.js。更多说明：[解析与音频](tools/guitar-pro/README.md)、[和弦检测验证](docs/chord-detection-validation.md)、[演示导出](docs/demo/README.md)。
 
-可直接在 Xcode 打开 `Package.swift` 编辑代码。CI 在 GitHub Actions 上执行测试并生成应用 ZIP。
+欢迎提交 Issue 和 PR。反馈音频问题时，请附 macOS 版本、声卡型号、输入设置与复现步骤；提交代码前运行 `swift test`。
 
-可选的界面快照验证（会短暂打开测试窗口，不访问音频）：
+## 许可证
 
-```bash
-FRETNOTE_SNAPSHOT_DIR=/tmp/fretnote-preview swift test --filter testRender
-```
-
-## 代码结构
-
-```text
-Sources/FretNoteCore/       音高识别、音符门控、指板映射、题目和复习权重
-Sources/FretNoteApp/        SwiftUI 界面、五线谱、Core Audio 输入、本地记录
-Tests/                     合成音频与练习状态测试
-Resources/Info.plist        应用信息与音频权限声明
-scripts/build-app.sh        本机应用打包并安装
-scripts/make-icon.swift     可复现的应用图标绘制
-Resources/AppIcon.svg      图标矢量源文件
-```
-
-音频链路：Core Audio 枚举设备 → AVAudioEngine 输入 tap → 选择单通道 → 独立串行队列降采样 → YIN 音高估计 → 稳定音符事件 → 练习状态机。
-
-选择控件参考 Apple 的 [Pop-up Buttons 设计规范](https://developer.apple.com/design/human-interface-guidelines/pop-up-buttons)，通过 AppKit `NSPopUpButton` 实现。
-
-使用 Apple 原生 [AVAudioEngine 输入节点](https://developer.apple.com/documentation/avfaudio/avaudioengine/inputnode)。算法测试覆盖 MIDI 40–88 的纯音与较强二次泛音、音分偏差、静音/噪声、持续音与重新拨弦；练习测试覆盖谱面八度、把位约束、判题、提示及持久化。
-
-## 后续方向
-
-- 用真实吉他录音建立音频回归样本，针对声卡和拨弦方式调整判定。
-- 区分音名与识谱熟练度，增加更明确的每日复习队列。
-- 加入节拍和节奏练习、听旋律后弹奏。
-- 增加降号、调号及更多把位练习。
-
-五线谱使用 [Steinberg Bravura](https://github.com/steinbergmedia/bravura) 字体及其 SMuFL 元数据。音头、八度高音谱号、升降号使用同一套字形；符干按连接锚点和 3.5 个谱线间距绘制。字体、元数据及许可证位于 `Sources/FretNoteApp/Resources/`，随应用打包。
-
-打包脚本将应用安装到 `~/Applications/FretNote.app`，中间产物在隐藏的 `.build` 目录中生成并自动清理。旧的 `dist/FretNote.app` 会在安装成功后移除，避免系统显示两个应用入口；学习记录仍保存在原来的 Application Support 目录。
-
-## 贡献与许可
-
-欢迎提交 Issue 和 Pull Request。提交前运行 `swift test`，涉及音频时请注明设备、macOS 版本和复现步骤；请勿提交个人学习记录、凭据或未经授权的录音。
-
-Inter 按 [SIL Open Font License 1.1](Sources/FretNoteApp/Resources/Inter-LICENSE.txt) 分发。本地提供的商业字体保留原许可，不随公开安装包分发。
-
-项目代码采用 [MIT License](LICENSE)。内置的 Bravura 字体及其元数据保留原许可，详见 [Bravura 许可证](Sources/FretNoteApp/Resources/Bravura-LICENSE.txt)。
-
-Guitar Pro 解析使用 [alphaTab 1.8.4](https://alphatab.net/)，保留其 [MPL-2.0 许可证](Sources/FretNoteApp/Resources/alphaTab-LICENSE.txt)。依赖固定版本与重建方法见 [解析器说明](tools/guitar-pro/README.md)。
-
-MIDI 合成使用 [TinySoundFont](https://github.com/schellingb/TinySoundFont)（[MIT 许可证](Sources/FretNoteApp/Resources/TinySoundFont-LICENSE.txt)）及 alphaTab 分发的 Sonivox 音色库（[Apache-2.0](Sources/FretNoteApp/Resources/Sonivox-LICENSE.txt)、[版权声明](Sources/FretNoteApp/Resources/Sonivox-NOTICE.txt)）。
+项目采用 [MIT](LICENSE)。随附组件保留各自许可证：[alphaTab · MPL-2.0](Sources/FretNoteApp/Resources/alphaTab-LICENSE.txt)、[TinySoundFont · MIT](Sources/FretNoteApp/Resources/TinySoundFont-LICENSE.txt)、[Sonivox · Apache-2.0](Sources/FretNoteApp/Resources/Sonivox-LICENSE.txt)、[Inter · OFL](Sources/FretNoteApp/Resources/Inter-LICENSE.txt)、[Bravura · OFL](Sources/FretNoteApp/Resources/Bravura-LICENSE.txt)。公开发布包使用开源字体，不包含本机提供的商业字体。
