@@ -217,6 +217,8 @@
   "返回": "Back",
   "音轨": "Track",
   "小节": "Bars",
+  "当前小节": "Current bar",
+  "跳到小节": "Jump to bar",
   "起始小节": "First bar",
   "结束小节": "Last bar",
   "速度": "Speed",

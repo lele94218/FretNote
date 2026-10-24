@@ -26,8 +26,6 @@ struct GuitarInstrumentCanvas: View, Animatable {
         }.clipped().accessibilityHidden(true)
     }
     private func drawGuitar(_ context: inout GraphicsContext, zoom: CGFloat, visibleHeight: CGFloat) {
-        let accent = Color(red: 0.20, green: 0.85, blue: 0.96)
-        let upcomingAccent = Color(red: 1.0, green: 0.70, blue: 0.25)
         for layer in NeckArtwork.bodyLayers {
             context.fill(layer.path, with: .color(layer.color))
         }
@@ -60,6 +58,7 @@ struct GuitarInstrumentCanvas: View, Animatable {
         }
         let active = activePositions ?? (notes.indices.contains(current) ? [notes[current]] : [])
         for string in 1...6 {
+            let accent = GuitarStringPalette.color(string)
             let gauge: CGFloat = [0.55, 0.75, 1.05, 1.5, 2.0, 2.6][string - 1]
             let bend = bends.first { $0.position.string == string && $0.position.fret > 0 }
             let contactX = bend.map { GuitarGeometry.noteX($0.position.fret) }
@@ -73,8 +72,8 @@ struct GuitarInstrumentCanvas: View, Animatable {
             if let contactX { line.addLine(to: point(contactX)) }
             line.addLine(to: point(GuitarGeometry.scaleLength))
             context.stroke(line, with: .color(.black.opacity(0.8)), lineWidth: gauge + 1.3)
-            context.stroke(line, with: .color(Color(white: string > 3 ? 0.65 : 0.87)), lineWidth: gauge)
-            context.stroke(line, with: .color(.white.opacity(0.7)), lineWidth: max(0.3, gauge * 0.24))
+            context.stroke(line, with: .color(accent.opacity(0.8)), lineWidth: max(gauge, 1 / zoom))
+            context.stroke(line, with: .color(.white.opacity(0.3)), lineWidth: max(0.3, gauge * 0.24))
             if let note = active.first(where: { $0.string == string && (0...21).contains($0.fret) }) {
                 let stop = contactX ?? GuitarGeometry.fretX(note.fret)
                 var muted = Path()
@@ -97,6 +96,7 @@ struct GuitarInstrumentCanvas: View, Animatable {
             return background.map { ($0, 2) } + upcoming.map { ($0, 1) } + active.map { ($0, 0) }
         } ?? (min(notes.count, max(0, current - 2))..<min(notes.count, max(0, current + 3))).map { (notes[$0], $0 - current) }
         for (note, relative) in markers {
+            let accent = GuitarStringPalette.color(note.string)
             guard (0...21).contains(note.fret), (1...6).contains(note.string) else { continue }
             let x = GuitarGeometry.noteX(note.fret)
             let displacement = relative == 0 ? bends.first(where: { $0.position == note })?.stringDisplacement(at: x) ?? 0 : 0
@@ -112,12 +112,24 @@ struct GuitarInstrumentCanvas: View, Animatable {
                 context.draw(Text(note.fullName).font(.editorial(size: 16 / zoom, weight: .semibold)).foregroundColor(.black), at: CGPoint(x: x, y: labelY))
             }
             let dot = Path(ellipseIn: CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2))
-            context.fill(dot, with: .color(relative == 0 ? accent : (relative == 1 ? upcomingAccent : (relative < 0 ? .white.opacity(0.35) : .white))))
-            context.stroke(dot, with: .color(.black), lineWidth: radius * 0.3)
+            // String color identifies pitch lane; fill/rings identify playback state.
+            if relative == 1 {
+                context.fill(dot, with: .color(.black.opacity(0.85)))
+                context.stroke(dot, with: .color(accent), lineWidth: radius * 0.45)
+            } else {
+                context.fill(dot, with: .color(accent.opacity(relative == 0 ? 1 : 0.55)))
+                context.stroke(dot, with: .color(.black), lineWidth: radius * 0.3)
+                if relative == 0 {
+                    context.stroke(Path(ellipseIn: CGRect(x: x - radius - 2 / zoom, y: y - radius - 2 / zoom,
+                                                        width: radius * 2 + 4 / zoom, height: radius * 2 + 4 / zoom)),
+                                   with: .color(.white), lineWidth: 1.5 / zoom)
+                }
+            }
         }
         // The fretting dot follows its displaced string while keeping the same fret.
         // Instructions stay outside the neck and follow the audio clock.
         for (index, bend) in bends.enumerated() {
+            let accent = GuitarStringPalette.color(bend.position.string)
             let note = bend.position
             let x = GuitarGeometry.noteX(note.fret)
             let y = GuitarGeometry.stringY(note.string, x: x) + bend.stringDisplacement(at: x)

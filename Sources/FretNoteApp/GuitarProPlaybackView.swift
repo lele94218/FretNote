@@ -88,6 +88,8 @@ struct GuitarProPlaybackView: View, Localizable {
                                   barPositions: ScoreBarPositions.positions(in: frames, at: step), bends: bends)
                 .animation(reduceMotion ? nil : .easeInOut(duration: FretboardPlaybackTimeline.cameraAnimation), value: camera)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+            ScoreBarTimeline(segments: ScoreBarSegment.make(frames: frames), step: step,
+                             position: playbackPosition * speed, seek: seek)
             HStack(spacing: 16) {
                 Button { seek(max(0, step - 1)) } label: { Image(systemName: "backward.end") }.accessibilityLabel(L("上一个音"))
                 Button(L(playing ? "暂停" : "播放")) {
@@ -100,7 +102,7 @@ struct GuitarProPlaybackView: View, Localizable {
                     }
                 }.buttonStyle(EditorialButtonStyle(prominent: true)).disabled(frames.isEmpty).keyboardShortcut(.space, modifiers: [])
                 Button { seek(min(max(0, frames.count - 1), step + 1)) } label: { Image(systemName: "forward.end") }.accessibilityLabel(L("下一个音"))
-                Slider(value: Binding(get: { Double(step) }, set: { seek(Int($0)) }), in: 0...Double(max(1, frames.count - 1)), step: 1).accessibilityLabel(L("乐谱进度"))
+                Spacer()
                 Image(systemName: volume == 0 ? "speaker.slash" : "speaker.wave.2").accessibilityHidden(true)
                 Slider(value: $volume, in: 0...1).frame(width: 90).accessibilityLabel(L("音量"))
                 Text("\(frames.isEmpty ? 0 : step + 1) / \(frames.count)").monospacedDigit()
