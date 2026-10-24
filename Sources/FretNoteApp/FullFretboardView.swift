@@ -177,7 +177,7 @@ struct FullFretboardView: View, Localizable {
         VStack(spacing: 0) {
             if !live && !workspace.documents.isEmpty { documentTabs }
             if !live, let document = workspace.selected {
-                GuitarProPlaybackView(score: document.score, embedded: embedded) { workspace.select(nil) }
+                GuitarProPlaybackView(score: document.score, embedded: embedded, repairScore: { importing = true }) { workspace.select(nil) }
                     .id(document.revision ?? document.id)
             } else { demoBody }
         }
@@ -190,7 +190,7 @@ struct FullFretboardView: View, Localizable {
                 defer { if access { url.stopAccessingSecurityScopedResource() }; loading = false }
                 do {
                     let score = try await Task.detached(priority: .userInitiated) { try GuitarProScore.load(url) }.value
-                    try workspace.add(score: score, sourceName: url.lastPathComponent)
+                    try workspace.add(score: score, sourceName: url.lastPathComponent, sourceData: Data(contentsOf: url))
                 }
                 catch { importError = error.localizedDescription }
             }

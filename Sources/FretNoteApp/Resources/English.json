@@ -220,6 +220,8 @@
   "关闭曲目": "Close score",
   "上一组音轨": "Previous tracks",
   "下一组音轨": "Next tracks",
+  "启用节拍器…": "Enable metronome…",
+  "选择原谱以补齐拍号，保留当前标签": "Choose the original score to restore meter without replacing its tab",
   "节拍器": "Metronome",
   "无法准备节拍器": "Unable to prepare metronome",
   "跟随乐谱拍号与速度": "Follow score meter and tempo",

@@ -7,6 +7,7 @@ final class GuitarProWorkspace: ObservableObject {
         let sourceName: String
         let score: GuitarProScore
         var revision: UUID? = nil
+        var sourceData: Data? = nil
     }
     private struct Snapshot: Codable {
         var documents: [Document]
@@ -28,9 +29,9 @@ final class GuitarProWorkspace: ObservableObject {
             selectedID = saved.selectedID == nil || documents.contains(where: { $0.id == saved.selectedID }) ? saved.selectedID : documents.first?.id
         } catch { self.error = error.localizedDescription }
     }
-    func add(score: GuitarProScore, sourceName: String) throws {
+    func add(score: GuitarProScore, sourceName: String, sourceData: Data? = nil) throws {
         let legacyIndex = documents.firstIndex { $0.sourceName == sourceName && $0.score.beats == nil }
-        let document = Document(id: legacyIndex.map { documents[$0].id } ?? UUID(), sourceName: sourceName, score: score, revision: UUID())
+        let document = Document(id: legacyIndex.map { documents[$0].id } ?? UUID(), sourceName: sourceName, score: score, revision: UUID(), sourceData: sourceData)
         var next = documents
         if let legacyIndex { next[legacyIndex] = document } else { next.append(document) }
         try save(documents: next, selectedID: document.id)

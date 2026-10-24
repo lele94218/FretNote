@@ -11,6 +11,7 @@ struct GuitarProPlaybackView: View, Localizable {
     var embedded = false
     let score: GuitarProScore
     let close: () -> Void
+    let repairScore: () -> Void
     @StateObject private var audio = ScoreMIDIPlayer()
     @State private var metronome = false
     @State private var pendingFrameIndex: Int?
@@ -28,8 +29,8 @@ struct GuitarProPlaybackView: View, Localizable {
     @State private var follow = true
     @State private var camera = FretboardCamera.overview
 
-    init(score: GuitarProScore, embedded: Bool = false, close: @escaping () -> Void) {
-        self.score = score; self.close = close; self.embedded = embedded
+    init(score: GuitarProScore, embedded: Bool = false, repairScore: @escaping () -> Void = {}, close: @escaping () -> Void) {
+        self.score = score; self.close = close; self.embedded = embedded; self.repairScore = repairScore
         _trackID = State(initialValue: score.tracks.first(where: \.supported)?.id ?? 0)
         _lastBar = State(initialValue: score.barCount)
     }
@@ -106,9 +107,13 @@ struct GuitarProPlaybackView: View, Localizable {
                 }.buttonStyle(EditorialButtonStyle(prominent: true)).disabled(frames.isEmpty).keyboardShortcut(.space, modifiers: [])
                 Button { seek(min(max(0, frames.count - 1), step + 1)) } label: { Image(systemName: "forward.end") }.accessibilityLabel(L("下一个音"))
                 Spacer()
-                Toggle(L("节拍器"), isOn: $metronome).toggleStyle(.checkbox)
-                    .disabled(score.beats == nil)
-                    .help(L(score.beats == nil ? "旧版曲目请重新导入一次以读取拍号" : "跟随乐谱拍号与速度"))
+                if score.beats == nil {
+                    Button(L("启用节拍器…"), action: repairScore)
+                        .help(L("选择原谱以补齐拍号，保留当前标签"))
+                } else {
+                    Toggle(L("节拍器"), isOn: $metronome).toggleStyle(.checkbox)
+                        .help(L("跟随乐谱拍号与速度"))
+                }
                 Image(systemName: volume == 0 ? "speaker.slash" : "speaker.wave.2").accessibilityHidden(true)
                 Slider(value: $volume, in: 0...1).frame(width: 90).accessibilityLabel(L("音量"))
                 Text("\(frames.isEmpty ? 0 : step + 1) / \(frames.count)").monospacedDigit()
