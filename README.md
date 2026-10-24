@@ -12,9 +12,9 @@ Learn the guitar fretboard, practice sight-reading, and follow Guitar Pro scores
 
 ## Preview
 
-![Animated fretboard playback with scale degrees, bends and vibrato](docs/demo/fretboard-player.gif)
+![Endless Rain solo excerpt with scale degrees and animated bends](docs/demo/fretboard-player.gif)
 
-An original practice phrase rendered with the app’s fretboard components. The GIF plays inline without sound. [Download the video with MIDI audio](https://github.com/lele94218/FretNote/releases/download/v0.4.0/FretNote-v0.4.0-demo.mp4) · [Try the demo score](docs/demo/fretnote-demo.gp)
+**Endless Rain · solo, bars 5–8.** A 1440 px / 30 fps preview rendered with the app’s fretboard components. The GIF plays inline without sound; the source score is not distributed. [Download the video with MIDI audio](https://github.com/lele94218/FretNote/releases/download/v0.4.0/FretNote-solo-preview.mp4) · [Try an original demo score](docs/demo/fretnote-demo.gp)
 
 ## Features
 
