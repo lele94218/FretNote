@@ -49,10 +49,12 @@ final class GuitarProImportTests: XCTestCase {
         let content: AnyView
         if ProcessInfo.processInfo.environment["FRETNOTE_SCALE_SNAPSHOT"] == "1", let track = score.tracks.first {
             let index = track.frames.firstIndex(where: { !$0.notes.isEmpty }) ?? 0
-            content = AnyView(ScoreScaleFretboardView(estimate: ScoreScaleAnalyzer.analyze(score: score, trackID: track.id)[track.frames[index].bar],
-                positions: ScoreBarPositions.positions(in: track.frames, at: index), active: track.frames[index].positions,
-                upcoming: track.frames.dropFirst(index + 1).first(where: { !$0.notes.isEmpty })?.positions ?? [], bends: [])
-                .padding(24).frame(height: 330))
+            let positions = ScoreBarPositions.positions(in: track.frames, at: index)
+            content = AnyView(GuitarInstrumentCanvas(camera: .fitting(positions), notes: [], current: 0, dark: false,
+                activePositions: track.frames[index].positions,
+                upcomingPositions: track.frames.dropFirst(index + 1).first(where: { !$0.notes.isEmpty })?.positions ?? [],
+                barPositions: positions, scaleEstimate: ScoreScaleAnalyzer.analyze(score: score, trackID: track.id)[track.frames[index].bar])
+                .frame(height: 330))
         } else { content = AnyView(GuitarProPlaybackView(score: score, close: {})) }
         let host = NSHostingView(rootView: content
             .environment(\.appLanguage, .english).environment(\.interfaceScale, 1.75)

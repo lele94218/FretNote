@@ -71,7 +71,7 @@ struct GuitarProPlaybackView: View, Localizable {
                 if !embedded { Button(L("完成")) { dismiss() }.keyboardShortcut(.cancelAction) }
             }
             HStack(spacing: 12) {
-                Toggle(L("音阶图"), isOn: $showScaleDiagram).toggleStyle(.switch)
+                Toggle(L("音级标记"), isOn: $showScaleDiagram).toggleStyle(.switch)
                 Text(L("小节"))
                 TextField("1", value: $firstBar, format: .number).frame(width: 44).accessibilityLabel(L("起始小节"))
                 Text("–")
@@ -93,21 +93,14 @@ struct GuitarProPlaybackView: View, Localizable {
                 Text(techniques)
                 Text("\(frame?.bar ?? firstBar) / \(score.barCount)").monospacedDigit()
             }.foregroundStyle(palette.muted).lineLimit(1)
-            Group {
-                if showScaleDiagram {
-                    ScoreScaleFretboardView(estimate: scaleEstimate,
-                        positions: ScoreBarPositions.positions(in: frames, at: step),
-                        active: frame?.positions ?? [], upcoming: nextPositions, bends: bends)
-                } else {
-                    GuitarInstrumentCanvas(camera: camera, notes: [], current: 0, dark: scheme == .dark,
-                        activePositions: frame?.positions ?? [], upcomingPositions: nextPositions,
-                        barPositions: ScoreBarPositions.positions(in: frames, at: step), bends: bends)
-                        .animation(reduceMotion ? nil : .easeInOut(duration: FretboardPlaybackTimeline.cameraAnimation), value: camera)
-                }
-            }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            GuitarInstrumentCanvas(camera: camera, notes: [], current: 0, dark: scheme == .dark,
+                activePositions: frame?.positions ?? [], upcomingPositions: nextPositions,
+                barPositions: ScoreBarPositions.positions(in: frames, at: step), bends: bends,
+                scaleEstimate: showScaleDiagram ? scaleEstimate : nil)
+                .animation(reduceMotion ? nil : .easeInOut(duration: FretboardPlaybackTimeline.cameraAnimation), value: camera)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             ScoreBarTimeline(segments: ScoreBarSegment.make(frames: frames), step: step,
                              seek: seek, tracks: score.tracks, selectedTrackID: trackID, selectTrackBar: selectTrackBar,
-                             maximumVisibleTracks: showScaleDiagram ? (scale > 1.4 ? 2 : 3) : nil,
                              mutedTracks: mutedTracks, toggleMute: { id in
                                  if mutedTracks.contains(id) { mutedTracks.remove(id) } else { mutedTracks.insert(id) }
                              })

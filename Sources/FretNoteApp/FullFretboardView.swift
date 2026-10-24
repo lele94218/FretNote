@@ -93,7 +93,20 @@ struct GuitarInstrumentCanvas: View, Animatable {
         // Text belongs outside the neck; it must never cover adjacent strings.
         let markers: [(GuitarNote, Int)] = activePositions.map { active in
             let upcoming = (upcomingPositions ?? []).filter { !active.contains($0) }
-            let background = barPositions.filter { !active.contains($0) && !upcoming.contains($0) }
+            var positions = barPositions
+            if let estimate = scaleEstimate {
+                let low = barPositions.map(\.fret).min() ?? active.first?.fret ?? 1
+                let high = barPositions.map(\.fret).max() ?? low
+                let anchor = active.first?.fret ?? upcoming.first?.fret ?? low
+                let first = max(0, min(18, high - low <= 3 ? low : anchor - 1))
+                positions += (first...(first + 3)).flatMap { fret in
+                    (1...6).map { GuitarNote(string: $0, fret: fret) }.filter {
+                        estimate.kind.intervals.contains(($0.midi - estimate.tonic + 120) % 12)
+                    }
+                }
+            }
+            var seen = Set<GuitarNote>()
+            let background = positions.filter { !active.contains($0) && !upcoming.contains($0) && seen.insert($0).inserted }
             return background.map { ($0, 2) } + upcoming.map { ($0, 1) } + active.map { ($0, 0) }
         } ?? (min(notes.count, max(0, current - 2))..<min(notes.count, max(0, current + 3))).map { (notes[$0], $0 - current) }
         for (note, relative) in markers {
@@ -102,7 +115,9 @@ struct GuitarInstrumentCanvas: View, Animatable {
             let x = GuitarGeometry.noteX(note.fret)
             let displacement = relative == 0 ? bends.first(where: { $0.position == note })?.stringDisplacement(at: x) ?? 0 : 0
             let y = GuitarGeometry.stringY(note.string, x: x) + displacement
-            let radius = GuitarGeometry.markerRadius(x: x, zoom: zoom) * (relative == 0 ? 1 : (relative == 1 ? 0.8 : 0.65))
+            let radius = scaleEstimate == nil
+                ? GuitarGeometry.markerRadius(x: x, zoom: zoom) * (relative == 0 ? 1 : (relative == 1 ? 0.8 : 0.65))
+                : (GuitarGeometry.stringY(2, x: x) - GuitarGeometry.stringY(1, x: x)) * 0.46
             if relative == 0 && active.count == 1 && !bends.contains(where: { $0.position == note }) {
                 let labelY = max(-100 - 18 / zoom, -visibleHeight / 2 + 22 / zoom)
                 var leader = Path(); leader.move(to: CGPoint(x: x, y: y - radius - 1))
@@ -118,7 +133,7 @@ struct GuitarInstrumentCanvas: View, Animatable {
                 context.fill(dot, with: .color(.black.opacity(0.85)))
                 context.stroke(dot, with: .color(accent), lineWidth: radius * 0.45)
             } else {
-                context.fill(dot, with: .color(accent.opacity(relative == 0 ? 1 : 0.55)))
+                context.fill(dot, with: .color(scaleEstimate != nil && relative != 0 ? .black : accent.opacity(relative == 0 ? 1 : 0.55)))
                 context.stroke(dot, with: .color(.black), lineWidth: radius * 0.3)
                 if relative == 0 {
                     context.stroke(Path(ellipseIn: CGRect(x: x - radius - 2 / zoom, y: y - radius - 2 / zoom,
@@ -129,7 +144,7 @@ struct GuitarInstrumentCanvas: View, Animatable {
             if let scaleEstimate {
                 let degree = scaleEstimate.degree(midi: note.midi)
                 context.draw(Text(degree).font(.editorial(size: radius * (degree.count > 1 ? 0.95 : 1.3), weight: .semibold))
-                    .foregroundColor(relative == 1 ? accent : .black), at: CGPoint(x: x, y: y))
+                    .foregroundColor(relative == 0 ? .black : .white), at: CGPoint(x: x, y: y))
             }
         }
         // The fretting dot follows its displaced string while keeping the same fret.
