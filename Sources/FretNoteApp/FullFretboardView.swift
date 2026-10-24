@@ -27,28 +27,33 @@ struct GuitarInstrumentCanvas: View, Animatable {
         }.clipped().accessibilityHidden(true)
     }
     private func drawGuitar(_ context: inout GraphicsContext, zoom: CGFloat, visibleHeight: CGFloat) {
-        for layer in NeckArtwork.bodyLayers {
-            context.fill(layer.path, with: .color(layer.color))
-        }
-        context.drawLayer { artwork in
-            artwork.clip(to: NeckArtwork.outline)
-            for layer in NeckArtwork.layers {
-                artwork.fill(layer.path, with: .color(layer.color))
+        // Fade the physical instrument as one layer; strings and labels stay crisp.
+        var instrument = context
+        instrument.opacity *= 0.4
+        instrument.drawLayer { context in
+            for layer in NeckArtwork.bodyLayers {
+                context.fill(layer.path, with: .color(layer.color))
             }
-        }
-        // Inlays are geometric circles, never irregular photo-traced polygons.
-        for fret in [3, 5, 7, 9, 12, 15, 17, 19, 21] {
-            for y: CGFloat in fret == 12 ? [-24, 24] : [0] {
-                let circle = CGRect(x: GuitarGeometry.noteX(fret) - 6, y: y - 6, width: 12, height: 12)
-                context.fill(Path(ellipseIn: circle), with: .color(Color(red: 0.87, green: 0.84, blue: 0.72)))
+            context.drawLayer { artwork in
+                artwork.clip(to: NeckArtwork.outline)
+                for layer in NeckArtwork.layers {
+                    artwork.fill(layer.path, with: .color(layer.color))
+                }
             }
-        }
-        // Metallic posts sit in the photographed tuning holes.
-        for string in 1...6 {
-            let post = NeckArtwork.tuningPost(string)
-            let ring = CGRect(x: post.x - 8, y: post.y - 8, width: 16, height: 16)
-            context.fill(Path(ellipseIn: ring), with: .linearGradient(Gradient(colors: [.gray, .white, .gray]), startPoint: CGPoint(x: ring.minX, y: ring.minY), endPoint: CGPoint(x: ring.maxX, y: ring.maxY)))
-            context.fill(Path(ellipseIn: ring.insetBy(dx: 4, dy: 4)), with: .color(Color(white: 0.25)))
+            // Inlays are geometric circles, never irregular photo-traced polygons.
+            for fret in [3, 5, 7, 9, 12, 15, 17, 19, 21] {
+                for y: CGFloat in fret == 12 ? [-24, 24] : [0] {
+                    let circle = CGRect(x: GuitarGeometry.noteX(fret) - 6, y: y - 6, width: 12, height: 12)
+                    context.fill(Path(ellipseIn: circle), with: .color(Color(red: 0.87, green: 0.84, blue: 0.72)))
+                }
+            }
+            // Metallic posts sit in the photographed tuning holes.
+            for string in 1...6 {
+                let post = NeckArtwork.tuningPost(string)
+                let ring = CGRect(x: post.x - 8, y: post.y - 8, width: 16, height: 16)
+                context.fill(Path(ellipseIn: ring), with: .linearGradient(Gradient(colors: [.gray, .white, .gray]), startPoint: CGPoint(x: ring.minX, y: ring.minY), endPoint: CGPoint(x: ring.maxX, y: ring.maxY)))
+                context.fill(Path(ellipseIn: ring.insetBy(dx: 4, dy: 4)), with: .color(Color(white: 0.25)))
+            }
         }
         for fret in 1...21 where zoom >= 1 || [1, 3, 5, 7, 9, 12, 15, 17, 19, 21].contains(fret) {
             if fret >= 12 {
