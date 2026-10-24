@@ -35,6 +35,29 @@ final class GuitarProWorkspaceTests: XCTestCase {
         XCTAssertTrue(GuitarProWorkspace(file: file).documents.isEmpty)
     }
     @MainActor
+    func testArchivedSourcesUpgradeTrackEventsWithoutLosingTabs() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = directory.appendingPathComponent("workspace.json")
+        let fixture = try XCTUnwrap(Bundle.module.url(forResource: "multitrack", withExtension: "gp", subdirectory: "Fixtures"))
+        let store = GuitarProWorkspace(file: file)
+        let legacy = GuitarProScore(title: "Old cache", tempo: 120, barCount: 2, tracks: [])
+        try store.add(score: legacy, sourceName: "multitrack.gp", sourceData: Data(contentsOf: fixture))
+        let id = store.selectedID
+        let revision = store.selected?.revision
+        await store.refreshImportedScores()
+        XCTAssertNil(store.error)
+        XCTAssertEqual(store.selectedID, id)
+        XCTAssertEqual(store.documents.count, 1)
+        XCTAssertNotEqual(store.selected?.revision, revision)
+        XCTAssertEqual(store.selected?.score.importVersion, 2)
+        XCTAssertEqual(store.selected?.score.tracks.count, 2)
+        XCTAssertTrue(store.selected!.score.tracks.allSatisfy { !$0.events.isEmpty })
+        let restored = GuitarProWorkspace(file: file)
+        XCTAssertEqual(restored.selectedID, id)
+        XCTAssertEqual(restored.selected?.score.importVersion, 2)
+    }
+    @MainActor
     func testFailedSaveDoesNotPretendTheImportWasSaved() throws {
         let file = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: file) }

@@ -26,6 +26,13 @@ export function parse(bytes) {
             beats.push({time:seconds(tick), accent:index===0});
         }
     }
+    // alphaTab defaults to format 0: every source track shares one MIDI container.
+    // Route by each event's original score track, never by container index.
+    const eventsByTrack=new Map();
+    for(const container of midiFile.tracks) for(const event of container.events) {
+        if(!eventsByTrack.has(event.track)) eventsByTrack.set(event.track,[]);
+        eventsByTrack.get(event.track).push(event);
+    }
     const tracks=[];
     for(const track of score.tracks) {
         const staff=track.staves[0];
@@ -57,7 +64,19 @@ export function parse(bytes) {
             }
         }
         const events = [];
-        for (const event of midiFile.tracks[track.index]?.events ?? []) {
+        const sourceEvents=eventsByTrack.get(track.index) ?? [];
+        // alphaTab's GP playback channels may exceed the MIDI 0...15 range.
+        // Each track is synthesized independently, so compact its virtual channels
+        // while preserving the percussion channel and independent bend channels.
+        const channels=[...new Set(sourceEvents.map(e=>e.channel).filter(c=>c!==undefined))];
+        const melodicChannels=Array.from({length:16},(_,i)=>i).filter(i=>i!==9);
+        const channelMap=new Map();
+        for(const channel of channels) {
+            const mapped=channel===9 ? 9 : melodicChannels.shift();
+            if(mapped===undefined) throw new Error('Too many MIDI channels in one track');
+            channelMap.set(channel,mapped);
+        }
+        for (const event of sourceEvents) {
             let kind, key=0, value=0;
             if(event instanceof midi.NoteOnEvent) { kind=1; key=event.noteKey; value=event.noteVelocity; }
             else if(event instanceof midi.NoteOffEvent) { kind=2; key=event.noteKey; }
@@ -66,9 +85,9 @@ export function parse(bytes) {
             else if(event instanceof midi.PitchBendEvent) { kind=5; value=event.value; }
             else if(event instanceof midi.NoteBendEvent) { kind=6; key=event.noteKey; value=Math.round(event.value / 262144); }
             else continue;
-            events.push({time:seconds(event.tick - midiFile.tickShift),kind,channel:event.channel,key,value});
+            events.push({time:seconds(event.tick - midiFile.tickShift),kind,channel:channelMap.get(event.channel),key,value});
         }
         tracks.push({id:track.index,name:track.name,supported:supported && frames.every(f=>f.notes.every(n=>n.fret<=21)),frames,events,barActivity:[...barActivity]});
     }
-    return JSON.stringify({title:score.title || 'Guitar Pro',tempo:score.tempo,barCount:score.masterBars.length,tracks,beats});
+    return JSON.stringify({importVersion:2,title:score.title || 'Guitar Pro',tempo:score.tempo,barCount:score.masterBars.length,tracks,beats});
 }

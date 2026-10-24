@@ -9,6 +9,7 @@ struct GuitarProScore: Codable, Sendable {
     let barCount: Int
     let tracks: [Track]
     var beats: [Beat]? = nil
+    var importVersion: Int? = nil
     struct Beat: Codable, Sendable {
         let time: Double
         let accent: Bool
@@ -62,7 +63,9 @@ struct GuitarProScore: Codable, Sendable {
     }
     /// A private JS VM on a background task: no browser, network or Python runtime.
     static func load(_ url: URL) throws -> GuitarProScore {
-        let data = try Data(contentsOf: url)
+        try load(data: Data(contentsOf: url))
+    }
+    static func load(data: Data) throws -> GuitarProScore {
         guard data.count <= 20_000_000 else { throw ImportError.invalid("文件太大（最大 20 MB）") }
         guard let context = JSContext(),
               let scriptURL = Bundle.module.url(forResource: "GuitarProImporter", withExtension: "js") else {

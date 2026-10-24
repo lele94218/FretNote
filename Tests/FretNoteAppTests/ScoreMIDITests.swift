@@ -27,6 +27,21 @@ final class ScoreMIDITests: XCTestCase {
         XCTAssertGreaterThan(peak(2), 0.1)
         XCTAssertEqual(peak(1), 0)
     }
+    func testMultiTrackVirtualChannelsRenderEveryLeadIndependently() throws {
+        let url = try XCTUnwrap(Bundle.module.url(forResource: "multitrack", withExtension: "gp", subdirectory: "Fixtures"))
+        let score = try GuitarProScore.load(url)
+        XCTAssertEqual(score.tracks.count, 2)
+        for (index, track) in score.tracks.enumerated() {
+            XCTAssertFalse(track.events.isEmpty)
+            XCTAssertTrue(track.events.allSatisfy { (0..<16).contains($0.channel) })
+            let noteOns = track.events.filter { $0.kind == 1 && $0.value > 0 }
+            XCTAssertEqual(noteOns.count, 4)
+            XCTAssertEqual(noteOns.first?.key, 69 + 2 * index)
+            let buffer = try ScoreMIDIRenderer.render(MIDIPlaybackPlan(track: track, firstBar: 1, lastBar: 2, speed: 1))
+            let samples = Array(UnsafeBufferPointer(start: buffer.floatChannelData![0].advanced(by: 4410), count: 4096))
+            XCTAssertEqual(try XCTUnwrap(PitchDetector.detect(samples, sampleRate: 44100, gate: 0.0001)).midi, 69 + 2 * index)
+        }
+    }
     func testRenderedRhythmPitchAndReducedSpeed() throws {
         let track = try fixture()
         XCTAssertTrue(track.events.contains { $0.kind == 6 && $0.value > 8192 })
@@ -72,12 +87,15 @@ final class ScoreMIDITests: XCTestCase {
     func testLocalSoloRendersEndToEnd() throws {
         guard let path = ProcessInfo.processInfo.environment["FRETNOTE_GP_TEST"] else { throw XCTSkip("Optional private score") }
         let score = try GuitarProScore.load(URL(fileURLWithPath: path))
-        let track = try XCTUnwrap(score.tracks.first)
+        for track in score.tracks where track.supported {
+        XCTAssertTrue(track.events.allSatisfy { (0..<16).contains($0.channel) })
+        XCTAssertTrue(track.events.contains { $0.kind == 1 && $0.value > 0 })
         let plan = MIDIPlaybackPlan(track: track, firstBar: 1, lastBar: score.barCount, speed: 1)
         let buffer = try ScoreMIDIRenderer.render(plan)
         XCTAssertEqual(Double(buffer.frameLength) / 44100, plan.duration, accuracy: 0.0001)
         let data = buffer.floatChannelData![0]
         XCTAssertTrue((0..<Int(buffer.frameLength)).contains { abs(data[$0]) > 0.01 })
+        }
     }
 
     private func stallUI() { Thread.sleep(forTimeInterval: 0.12) }

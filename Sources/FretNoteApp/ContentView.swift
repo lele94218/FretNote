@@ -27,6 +27,7 @@ struct ContentView: View, Localizable {
                 LearningView(store: learningStore, practice: practice, audio: audio, drill: shapePractice, workspace: scoreWorkspace)
             } else { practiceBody }
         }
+        .task { await scoreWorkspace.refreshImportedScores() }
         .sheet(isPresented: $showFullFretboard) { PracticeFretboardSheet(practice: practice, workspace: scoreWorkspace) }
         .onChange(of: practice.scorePlayback) { UserDefaults.standard.set($0, forKey: "scorePlaybackTab") }
         .onAppear {

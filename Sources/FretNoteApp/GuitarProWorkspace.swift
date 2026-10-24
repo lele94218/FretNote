@@ -38,6 +38,21 @@ final class GuitarProWorkspace: ObservableObject {
         documents = next
         selectedID = document.id
     }
+    /// Upgrade parsed caches from their archived sources without losing open tabs.
+    func refreshImportedScores() async {
+        for document in documents where document.score.importVersion != 2 {
+            guard let data = document.sourceData else { continue }
+            do {
+                let score = try await Task.detached(priority: .userInitiated) { try GuitarProScore.load(data: data) }.value
+                guard let index = documents.firstIndex(where: { $0.id == document.id && $0.revision == document.revision }) else { continue }
+                var next = documents
+                next[index] = Document(id: document.id, sourceName: document.sourceName, score: score,
+                                       revision: UUID(), sourceData: data)
+                try save(documents: next, selectedID: selectedID)
+                documents = next
+            } catch { self.error = error.localizedDescription }
+        }
+    }
     func select(_ id: UUID?) {
         guard id == nil || documents.contains(where: { $0.id == id }) else { return }
         do {
