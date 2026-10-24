@@ -33,11 +33,32 @@ final class ScoreBendDisplayTests: XCTestCase {
         XCTAssertEqual(peak.progress, 1)
         XCTAssertFalse(peak.releasing)
         let release = try XCTUnwrap(ScoreBendDisplay.current(track: track, frame: frame, time: 0.8).first)
-        XCTAssertEqual(release.semitones, 1)
-        XCTAssertEqual(release.progress, 0.5)
+        XCTAssertEqual(release.semitones, 0.8, accuracy: 0.00001)
+        XCTAssertEqual(release.progress, 0.4, accuracy: 0.00001)
         XCTAssertTrue(release.releasing)
         XCTAssertEqual(release.position, start.position)
         XCTAssertEqual(ScoreBendDisplay.current(track: track, frame: frame, time: 1).first?.progress, 0)
+    }
+    func testSlowPlaybackInterpolatesBetweenWheelSamples() throws {
+        let track = track(), frame = track.frames[0]
+        // At 25% speed, a 16 ms screen refresh advances only 4 ms in the score.
+        let values = try (0...10).map { tick in
+            try XCTUnwrap(ScoreBendDisplay.current(track: track, frame: frame, time: 0.2 + Double(tick) * 0.004).first).semitones
+        }
+        for index in 1..<values.count {
+            XCTAssertEqual(values[index] - values[index - 1], 0.016, accuracy: 0.00001)
+        }
+        XCTAssertEqual(values[0], 0.8, accuracy: 0.00001)
+    }
+    func testDoesNotInterpolateIntoNextAttack() throws {
+        let source = track()
+        let events = Array(source.events.prefix(6)) + [
+            GuitarProScore.MIDIEvent(time: 0.6, kind: 2, channel: 1, key: 69, value: 0),
+            .init(time: 0.7, kind: 6, channel: 1, key: 69, value: 8192),
+            .init(time: 0.7, kind: 1, channel: 1, key: 69, value: 95)
+        ]
+        let track = GuitarProScore.Track(id: 0, name: "Boundary", supported: true, frames: source.frames, events: events)
+        XCTAssertEqual(try XCTUnwrap(ScoreBendDisplay.current(track: track, frame: track.frames[0], time: 0.55).first).semitones, 2)
     }
     func testStringDeflectionKeepsEndpointsFixedAndReturnsWithPitch() {
         let note = GuitarNote(string: 5, fret: 12)

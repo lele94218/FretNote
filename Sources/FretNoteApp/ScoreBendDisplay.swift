@@ -37,7 +37,8 @@ struct ScoreBendDisplay: Equatable {
         return position.fullName + " → " + name + (cents == 0 ? "" : " +\(cents)¢")
     }
 
-    /// Read the same per-note MIDI wheel and RPN range that drive the synth.
+    /// Interpolate between MIDI wheel samples for continuous visual motion.
+    /// Audio still uses its original events; no delay or extra playback time is introduced.
     /// The time is on the original score axis (before bar selection / slowdown).
     static func current(track: GuitarProScore.Track, frame: GuitarProScore.Frame, time: Double) -> [Self] {
         frame.notes.compactMap { note in
@@ -57,8 +58,10 @@ struct ScoreBendDisplay: Equatable {
             var rpnMSB = 127, rpnLSB = 127
             var releasing = false
             var hasWheel = false
+            var lastWheelTime: Double?
+            var noteStart = frame.start
             for event in events where event.channel == channel {
-                if event.kind == 1 && event.key == position.midi { releasing = false }
+                if event.kind == 1 && event.key == position.midi { releasing = false; noteStart = event.time }
                 if event.kind == 3 {
                     if event.key == 101 { rpnMSB = event.value }
                     if event.key == 100 { rpnLSB = event.value }
@@ -68,10 +71,26 @@ struct ScoreBendDisplay: Equatable {
                     }
                 } else if event.kind == 6 && event.key == position.midi {
                     if event.value != wheel { releasing = event.value < wheel }
-                    wheel = event.value; hasWheel = true
+                    wheel = event.value; hasWheel = true; lastWheelTime = event.time
                 } else if event.kind == 5 { channelWheel = event.value }
             }
-            let amount = hasWheel ? Double(wheel + channelWheel - 16384) / 8192 * (range + cents) : (points.first?.semitones ?? 0)
+            var visualWheel = Double(wheel)
+            if hasWheel, let lastWheelTime {
+                let start = max(lastWheelTime, noteStart)
+                // Never interpolate toward a reset belonging to a later attack.
+                for event in track.events.dropFirst(events.count) where event.channel == channel {
+                    if (event.kind == 1 || event.kind == 2) && event.key == position.midi { break }
+                    if event.kind == 6 && event.key == position.midi {
+                        if event.time > start {
+                            let fraction = min(1, max(0, (time - start) / (event.time - start)))
+                            visualWheel += Double(event.value - wheel) * fraction
+                            if time > start && event.value != wheel { releasing = event.value < wheel }
+                        }
+                        break
+                    }
+                }
+            }
+            let amount = hasWheel ? (visualWheel + Double(channelWheel) - 16384) / 8192 * (range + cents) : (points.first?.semitones ?? 0)
             let target = max(points.map(\.semitones).max() ?? 0, amount)
             guard target > 0.01 else { return nil }
             return Self(position: position, semitones: amount, target: target, releasing: releasing)
