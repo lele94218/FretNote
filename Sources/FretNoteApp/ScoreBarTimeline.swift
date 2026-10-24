@@ -34,12 +34,13 @@ struct ScoreBarTimeline: View, Localizable {
     var tracks: [GuitarProScore.Track] = []
     var selectedTrackID: Int = 0
     var selectTrackBar: ((Int, Int) -> Void)? = nil
+    var maximumVisibleTracks: Int? = nil
     var mutedTracks: Set<Int> = []
     var toggleMute: ((Int) -> Void)? = nil
     @State private var page = 0
     private var currentID: Int? { segments.last(where: { $0.id <= step })?.id }
     private var currentColumn: Int { segments.lastIndex(where: { $0.id <= step }) ?? 0 }
-    private var rowLimit: Int { scale > 1.4 ? 4 : 6 }
+    private var rowLimit: Int { min(maximumVisibleTracks ?? 6, scale > 1.4 ? 4 : 6) }
     private var visibleTracks: [GuitarProScore.Track] { Array(tracks.dropFirst(page * rowLimit).prefix(rowLimit)) }
     private var rowHeight: CGFloat { 22 * scale }
     private var accent: Color { Color(red: 0.20, green: 0.85, blue: 0.96) }
