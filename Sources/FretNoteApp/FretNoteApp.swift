@@ -30,7 +30,7 @@ struct FretNoteApp: App, Localizable {
                 Button(practice.active ? L("结束练习") : L("开始练习")) {
                     if practice.active { practice.end() } else { practice.start() }
                 }.keyboardShortcut(.return, modifiers: .command)
-                    .disabled(practice.learning || practice.showSummary || (!practice.active && !audio.running))
+                    .disabled(practice.scorePlayback || practice.learning || practice.showSummary || (!practice.active && !audio.running))
                 Button(L("提示位置")) { practice.reveal() }.keyboardShortcut("h", modifiers: [.command, .shift])
                     .disabled(!practice.active || practice.completed)
                 Button(L("跳过")) { practice.skip() }.keyboardShortcut(.rightArrow, modifiers: .command)
@@ -39,7 +39,7 @@ struct FretNoteApp: App, Localizable {
                 Button(audio.running ? L("停止监听") : L("开启输入")) {
                     if audio.running { audio.stop() } else { Task { await audio.start() } }
                 }.keyboardShortcut("i", modifiers: [.command, .shift])
-                    .disabled(practice.learning || audio.starting || audio.devices.isEmpty)
+                    .disabled(practice.scorePlayback || practice.learning || audio.starting || audio.devices.isEmpty)
             }
         }
         Settings {

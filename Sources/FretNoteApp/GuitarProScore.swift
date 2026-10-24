@@ -3,12 +3,12 @@ import JavaScriptCore
 import CoreFoundation
 import FretNoteCore
 
-struct GuitarProScore: Decodable, Sendable {
+struct GuitarProScore: Codable, Sendable {
     let title: String
     let tempo: Double
     let barCount: Int
     let tracks: [Track]
-    struct Track: Decodable, Identifiable, Sendable {
+    struct Track: Codable, Identifiable, Sendable {
         let id: Int
         let name: String
         let supported: Bool
@@ -23,7 +23,7 @@ struct GuitarProScore: Decodable, Sendable {
             }
         }
     }
-    struct MIDIEvent: Decodable, Sendable, Equatable {
+    struct MIDIEvent: Codable, Sendable, Equatable {
         let time: Double
         let kind: Int
         let channel: Int
@@ -31,14 +31,14 @@ struct GuitarProScore: Decodable, Sendable {
         let value: Int
         func at(_ time: Double) -> Self { .init(time: time, kind: kind, channel: channel, key: key, value: value) }
     }
-    struct Frame: Decodable, Sendable {
+    struct Frame: Codable, Sendable {
         let start: Double
         let end: Double
         let bar: Int
         let notes: [Note]
         var positions: [GuitarNote] { notes.map { GuitarNote(string: $0.string, fret: $0.fret) } }
     }
-    struct Note: Decodable, Sendable {
+    struct Note: Codable, Sendable {
         let string: Int
         let fret: Int
         let bend: [Bend]
@@ -46,7 +46,7 @@ struct GuitarProScore: Decodable, Sendable {
         let slide: Bool
         let legato: Bool
     }
-    struct Bend: Decodable, Sendable { let offset: Double; let semitones: Double }
+    struct Bend: Codable, Sendable { let offset: Double; let semitones: Double }
 
     enum ImportError: Error, LocalizedError {
         case invalid(String)

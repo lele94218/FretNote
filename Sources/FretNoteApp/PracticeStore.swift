@@ -4,8 +4,10 @@ import FretNoteCore
 @MainActor
 final class PracticeStore: ObservableObject {
     static let maximumFret = 21
+    @Published var scorePlayback = false
     @Published private(set) var learning = false
     func setLearning(_ enabled: Bool, audio: AudioInput) {
+        scorePlayback = false
         if enabled {
             if active { end() }
             showSummary = false

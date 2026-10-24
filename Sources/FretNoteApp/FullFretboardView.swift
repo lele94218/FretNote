@@ -161,7 +161,8 @@ struct FullFretboardView: View, Localizable {
     var live = false
     var framingNotes: [GuitarNote]? = nil
     var prompt: String? = nil
-    @State private var importedScore: GuitarProScore?
+    var embedded = false
+    @StateObject var workspace = GuitarProWorkspace(file: nil)
     @State private var importing = false
     @State private var loading = false
     @State private var importError: String?
@@ -173,9 +174,11 @@ struct FullFretboardView: View, Localizable {
     private var palette: AppPalette { AppPalette(scheme: scheme) }
     private var animation: Animation? { reduceMotion ? nil : .easeInOut(duration: FretboardPlaybackTimeline.cameraAnimation) }
     var body: some View {
-        Group {
-            if let importedScore {
-                GuitarProPlaybackView(score: importedScore) { self.importedScore = nil }
+        VStack(spacing: 0) {
+            if !live && !workspace.documents.isEmpty { documentTabs }
+            if !live, let document = workspace.selected {
+                GuitarProPlaybackView(score: document.score, embedded: embedded) { workspace.select(nil) }
+                    .id(document.id)
             } else { demoBody }
         }
         .fileImporter(isPresented: $importing, allowedContentTypes: ["gp3", "gp4", "gp5", "gpx", "gp"].compactMap { UTType(filenameExtension: $0) }, allowsMultipleSelection: false) { result in
@@ -185,13 +188,40 @@ struct FullFretboardView: View, Localizable {
             Task {
                 let access = url.startAccessingSecurityScopedResource()
                 defer { if access { url.stopAccessingSecurityScopedResource() }; loading = false }
-                do { importedScore = try await Task.detached(priority: .userInitiated) { try GuitarProScore.load(url) }.value }
+                do {
+                    let score = try await Task.detached(priority: .userInitiated) { try GuitarProScore.load(url) }.value
+                    try workspace.add(score: score, sourceName: url.lastPathComponent)
+                }
                 catch { importError = error.localizedDescription }
             }
         }
         .alert(L("无法导入"), isPresented: Binding(get: { importError != nil }, set: { if !$0 { importError = nil } })) {
             Button(L("好")) { importError = nil }
         } message: { Text(L(importError ?? "")) }
+        .onChange(of: workspace.error) { value in if let value { importError = value; workspace.error = nil } }
+        .onAppear { if let error = workspace.error { importError = error; workspace.error = nil } }
+    }
+    private var documentTabs: some View {
+        HStack(spacing: 12) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(workspace.documents) { document in
+                        HStack(spacing: 8) {
+                            Button { workspace.select(document.id) } label: {
+                                Text(document.score.title).lineLimit(1).frame(maxWidth: 180)
+                            }.help(document.sourceName)
+                            Button { workspace.close(document.id) } label: { Image(systemName: "xmark").font(.system(size: 10)) }
+                                .accessibilityLabel(L("关闭曲目") + " " + document.score.title)
+                        }
+                        .padding(.horizontal, 10).padding(.vertical, 8)
+                        .background(workspace.selectedID == document.id ? palette.rule : Color.clear)
+                    }
+                }
+            }
+            Button(L(loading ? "正在导入…" : "导入 Guitar Pro")) { importing = true }.disabled(loading)
+        }
+        .font(.editorial(size: 12 * scale)).buttonStyle(.plain)
+        .padding(.horizontal, 24).padding(.top, 12)
     }
     private var demoBody: some View {
         VStack(spacing: 16) {
@@ -204,7 +234,7 @@ struct FullFretboardView: View, Localizable {
                 Button(L("完整琴颈")) { follow = false; camera = .overview }
                 Button(L("自动取景")) { follow = true; updateCamera() }
                     .buttonStyle(EditorialButtonStyle(prominent: follow))
-                Button(L("完成")) { dismiss() }.keyboardShortcut(.cancelAction)
+                if !embedded { Button(L("完成")) { dismiss() }.keyboardShortcut(.cancelAction) }
             }
             HStack {
                 Text(L(live ? "跟随练习进度 · 显示参考弦位" : "动画演示 · 不计入学习记录"))
@@ -239,7 +269,7 @@ struct FullFretboardView: View, Localizable {
             .font(.editorial(size: 12 * scale))
             .foregroundStyle(palette.ink).background(palette.background)
             .buttonStyle(EditorialButtonStyle())
-            .frame(minWidth: 900, idealWidth: 960, minHeight: 560, idealHeight: 620)
+            .frame(minWidth: embedded ? 600 : 900, idealWidth: 960, minHeight: embedded ? 440 : 560, idealHeight: 620)
             .onChange(of: framingNotes) { _ in if live { updateCamera() } }
             .onChange(of: notes) { _ in if live && framingNotes == nil { updateCamera() } }
             .onAppear { if live { updateCamera() } }
@@ -324,22 +354,24 @@ struct FullFretboardView: View, Localizable {
 /// The sheet observes live stores instead of capturing a stale note array.
 struct PracticeFretboardSheet: View {
     @ObservedObject var practice: PracticeStore
+    let workspace: GuitarProWorkspace
     var body: some View {
         let shown = Array(practice.notes.prefix(practice.index)) + (practice.hint ? practice.target.map { [$0] } ?? [] : [])
         FullFretboardView(notes: practice.active ? shown : GuitarGeometry.demo,
                           current: max(0, shown.count - 1), live: practice.active,
                           framingNotes: practice.active ? practice.notes : nil,
-                          prompt: practice.active ? practice.target.map { $0.fullName + " · \(practice.answered) / 20" } : nil)
+                          prompt: practice.active ? practice.target.map { $0.fullName + " · \(practice.answered) / 20" } : nil, workspace: workspace)
     }
 }
 struct ShapeFretboardSheet: View {
     @ObservedObject var drill: ShapePracticeStore
+    let workspace: GuitarProWorkspace
     var body: some View {
         let all = drill.question?.shape.tones.map(\.note) ?? []
         let shown = drill.revealed || drill.completed ? all : Array(all.prefix(drill.noteIndex))
         FullFretboardView(notes: drill.active ? shown : GuitarGeometry.demo,
                           current: min(max(0, shown.count - 1), drill.noteIndex), live: drill.active,
                           framingNotes: drill.active ? all : nil,
-                          prompt: drill.active ? all.map(\.name).joined(separator: " · ") : nil)
+                          prompt: drill.active ? all.map(\.name).joined(separator: " · ") : nil, workspace: workspace)
     }
 }

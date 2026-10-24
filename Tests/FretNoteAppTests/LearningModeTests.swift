@@ -68,7 +68,7 @@ final class LearningModeTests: XCTestCase {
             if exercise {
                 drill.start(catalog: Array(store.catalog.prefix(1)), arpeggio: arpeggio, name: "A", shell: shell)
             }
-            let view = LearningView(store: store, practice: practice, audio: audio, drill: drill)
+            let view = LearningView(store: store, practice: practice, audio: audio, drill: drill, workspace: GuitarProWorkspace(file: nil))
                 .environmentObject(appearance)
                 .environment(\.appLanguage, ProcessInfo.processInfo.environment["FRETNOTE_SNAPSHOT_LANGUAGE"] == "en" ? .english : .chinese).environment(\.interfaceScale, fontScale)
                 .preferredColorScheme(theme.colorScheme).frame(width: width, height: height)

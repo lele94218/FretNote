@@ -17,6 +17,7 @@ struct LearningView: View, Localizable {
     @ObservedObject var practice: PracticeStore
     @ObservedObject var audio: AudioInput
     @ObservedObject var drill: ShapePracticeStore
+    let workspace: GuitarProWorkspace
     @State private var showHistory = false
     @State private var showFullFretboard = false
     @EnvironmentObject private var appearance: AppearancePreferences
@@ -64,7 +65,7 @@ struct LearningView: View, Localizable {
         .foregroundStyle(palette.ink).background(palette.background).tint(palette.ink)
         .onChange(of: store.root) { _ in drill.clear() }
         .onChange(of: store.quality) { _ in drill.clear() }
-        .sheet(isPresented: $showFullFretboard) { ShapeFretboardSheet(drill: drill) }
+        .sheet(isPresented: $showFullFretboard) { ShapeFretboardSheet(drill: drill, workspace: workspace) }
         .sheet(isPresented: $showHistory) { LearningHistoryView(practice: practice) }
 
     }
@@ -224,22 +225,28 @@ struct ExerciseNavigation: View, Localizable {
         VStack(alignment: .leading, spacing: 4) {
             Text(L("FRETNOTE")).font(.editorial(size: 12 * scale, weight: .regular)).tracking(0.25 * scale).foregroundStyle(palette.ink)
             ForEach(PracticeMode.allCases) { mode in
-                item(mode.rawValue, selected: !practice.learning && practice.mode == mode) {
+                item(mode.rawValue, selected: !practice.scorePlayback && !practice.learning && practice.mode == mode) {
                     drill.reset(records: practice, audio: audio)
                     practice.setLearning(false, audio: audio)
                     practice.mode = mode
                     practice.notes = []
                 }
             }
-            item(L("和弦练习"), selected: practice.learning && !learning.arpeggio) {
+            item(L("和弦练习"), selected: !practice.scorePlayback && practice.learning && !learning.arpeggio) {
                 drill.reset(records: practice, audio: audio)
                 learning.arpeggio = false
                 practice.setLearning(true, audio: audio)
             }
-            item(L("琶音练习"), selected: practice.learning && learning.arpeggio) {
+            item(L("琶音练习"), selected: !practice.scorePlayback && practice.learning && learning.arpeggio) {
                 drill.reset(records: practice, audio: audio)
                 learning.arpeggio = true
                 practice.setLearning(true, audio: audio)
+            }
+            item(L("指板跟谱"), selected: practice.scorePlayback) {
+                drill.reset(records: practice, audio: audio)
+                practice.setLearning(false, audio: audio)
+                audio.stop()
+                practice.scorePlayback = true
             }
         }.disabled(practice.active || drill.active || audio.starting)
     }

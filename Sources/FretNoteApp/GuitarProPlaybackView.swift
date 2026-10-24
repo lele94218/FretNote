@@ -8,6 +8,7 @@ struct GuitarProPlaybackView: View, Localizable {
     @Environment(\.interfaceScale) private var scale
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dismiss) private var dismiss
+    var embedded = false
     let score: GuitarProScore
     let close: () -> Void
     @StateObject private var audio = ScoreMIDIPlayer()
@@ -25,8 +26,8 @@ struct GuitarProPlaybackView: View, Localizable {
     @State private var follow = true
     @State private var camera = FretboardCamera.overview
 
-    init(score: GuitarProScore, close: @escaping () -> Void) {
-        self.score = score; self.close = close
+    init(score: GuitarProScore, embedded: Bool = false, close: @escaping () -> Void) {
+        self.score = score; self.close = close; self.embedded = embedded
         _trackID = State(initialValue: score.tracks.first(where: \.supported)?.id ?? 0)
         _lastBar = State(initialValue: score.barCount)
     }
@@ -60,7 +61,7 @@ struct GuitarProPlaybackView: View, Localizable {
                 Spacer()
                 Button(L("完整琴颈")) { follow = false; camera = .overview }
                 Button(L("自动取景")) { follow = true; settle() }.buttonStyle(EditorialButtonStyle(prominent: follow))
-                Button(L("完成")) { dismiss() }.keyboardShortcut(.cancelAction)
+                if !embedded { Button(L("完成")) { dismiss() }.keyboardShortcut(.cancelAction) }
             }
             HStack(spacing: 12) {
                 Picker(L("音轨"), selection: $trackID) {
@@ -111,7 +112,7 @@ struct GuitarProPlaybackView: View, Localizable {
         .padding(24).font(.editorial(size: 12 * scale))
         .foregroundStyle(palette.ink).background(palette.background)
         .buttonStyle(EditorialButtonStyle())
-        .frame(minWidth: 900, idealWidth: 960, minHeight: 560, idealHeight: 620)
+        .frame(minWidth: embedded ? 600 : 900, idealWidth: 960, minHeight: embedded ? 440 : 560, idealHeight: 620)
         .onAppear { settle() }
         .onChange(of: trackID) { _ in seek(0) }
         .onChange(of: firstBar) { _ in firstBar = max(1, min(score.barCount, firstBar)); lastBar = max(firstBar, lastBar); seek(0) }

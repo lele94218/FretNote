@@ -15,17 +15,25 @@ struct ContentView: View, Localizable {
     @ObservedObject var practice: PracticeStore
     @StateObject private var learningStore = LearningStore()
     @StateObject private var shapePractice = ShapePracticeStore()
+    @StateObject private var scoreWorkspace = GuitarProWorkspace()
+    @State private var restoredNavigation = false
     @State private var showProgress = false
     @State private var showFullFretboard = false
     @State private var showError = false
     var body: some View {
         Group {
-            if practice.learning {
-                LearningView(store: learningStore, practice: practice, audio: audio, drill: shapePractice)
+            if practice.scorePlayback { scoreBody }
+            else if practice.learning {
+                LearningView(store: learningStore, practice: practice, audio: audio, drill: shapePractice, workspace: scoreWorkspace)
             } else { practiceBody }
         }
-        .sheet(isPresented: $showFullFretboard) { PracticeFretboardSheet(practice: practice) }
+        .sheet(isPresented: $showFullFretboard) { PracticeFretboardSheet(practice: practice, workspace: scoreWorkspace) }
+        .onChange(of: practice.scorePlayback) { UserDefaults.standard.set($0, forKey: "scorePlaybackTab") }
         .onAppear {
+            if !restoredNavigation {
+                practice.scorePlayback = UserDefaults.standard.bool(forKey: "scorePlaybackTab")
+                restoredNavigation = true
+            }
             audio.onNote = { midi in
                 if practice.learning { shapePractice.receive(note: midi, records: practice) }
                 else { practice.receive(midi) }
@@ -38,6 +46,26 @@ struct ContentView: View, Localizable {
         .onChange(of: audio.running) { running in
             if !running && shapePractice.active { shapePractice.end(records: practice) }
         }
+    }
+    private var scoreBody: some View {
+        HSplitView {
+            if appearance.sidebarVisible {
+                VStack(alignment: .leading) {
+                    ExerciseNavigation(practice: practice, audio: audio, learning: learningStore, drill: shapePractice)
+                    Spacer()
+                }.padding(20).frame(minWidth: 250, idealWidth: 270, maxWidth: 330)
+            }
+            VStack(spacing: 0) {
+                HStack {
+                    Button { appearance.sidebarVisible.toggle() } label: { Image(systemName: "sidebar.left") }
+                        .accessibilityLabel(L("显示或隐藏侧栏"))
+                    Text(L("指板跟谱")).font(.editorial(size: 20 * scale))
+                    Spacer()
+                    OpenSettingsButton()
+                }.buttonStyle(EditorialButtonStyle()).padding(.horizontal, 24).padding(.top, 16)
+                FullFretboardView(embedded: true, workspace: scoreWorkspace)
+            }.frame(minWidth: 600)
+        }.foregroundStyle(ink).background(palette.background)
     }
     private var practiceBody: some View {
         HSplitView {
