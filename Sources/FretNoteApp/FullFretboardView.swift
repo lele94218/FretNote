@@ -189,6 +189,7 @@ struct FullFretboardView: View, Localizable {
     var prompt: String? = nil
     var embedded = false
     @StateObject var workspace = GuitarProWorkspace(file: nil)
+    @State private var documentPage = 0
     @State private var importing = false
     @State private var loading = false
     @State private var importError: String?
@@ -201,7 +202,7 @@ struct FullFretboardView: View, Localizable {
     private var animation: Animation? { reduceMotion ? nil : .easeInOut(duration: FretboardPlaybackTimeline.cameraAnimation) }
     var body: some View {
         VStack(spacing: 0) {
-            if !live && !workspace.documents.isEmpty { documentTabs }
+            if !live && !workspace.documents.isEmpty { documentList }
             if !live, let document = workspace.selected {
                 GuitarProPlaybackView(score: document.score, embedded: embedded, repairScore: { importing = true }) { workspace.select(nil) }
                     .id(document.revision ?? document.id)
@@ -227,27 +228,56 @@ struct FullFretboardView: View, Localizable {
         .onChange(of: workspace.error) { value in if let value { importError = value; workspace.error = nil } }
         .onAppear { if let error = workspace.error { importError = error; workspace.error = nil } }
     }
-    private var documentTabs: some View {
-        HStack(spacing: 12) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach(workspace.documents) { document in
-                        HStack(spacing: 8) {
-                            Button { workspace.select(document.id) } label: {
-                                Text(document.score.title).lineLimit(1).frame(maxWidth: 180)
-                            }.help(document.sourceName)
-                            Button { workspace.close(document.id) } label: { Image(systemName: "xmark").font(.system(size: 10)) }
-                                .accessibilityLabel(L("关闭曲目") + " " + document.score.title)
-                        }
-                        .padding(.horizontal, 10).padding(.vertical, 8)
-                        .background(workspace.selectedID == document.id ? palette.rule : Color.clear)
+    private var documentRows: Int { scale > 1.4 ? 2 : 3 }
+    private var documentList: some View {
+        HStack(alignment: .top, spacing: 16) {
+            VStack(spacing: 2) {
+                ForEach(Array(workspace.documents.dropFirst(documentPage * documentRows).prefix(documentRows))) { document in
+                    HStack(spacing: 8) {
+                        Button { workspace.select(document.id) } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "doc.text").foregroundStyle(palette.muted)
+                                Text(document.sourceName).lineLimit(1).truncationMode(.middle)
+                                Spacer(minLength: 0)
+                            }.frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 7).contentShape(Rectangle())
+                        }.help(document.score.title)
+                        Button { workspace.close(document.id) } label: {
+                            Image(systemName: "xmark").font(.system(size: 10 * scale))
+                                .frame(width: 24 * scale, height: 24 * scale).contentShape(Rectangle())
+                        }.accessibilityLabel(L("关闭曲目") + " " + document.sourceName)
+                    }
+                    .padding(.horizontal, 10)
+                    .background(workspace.selectedID == document.id ? palette.rule : Color.clear)
+                }
+            }.frame(maxWidth: .infinity)
+            VStack(alignment: .trailing, spacing: 8) {
+                Button(L(loading ? "正在导入…" : "导入 Guitar Pro")) { importing = true }.disabled(loading)
+                    .padding(.vertical, 7)
+                if workspace.documents.count > documentRows {
+                    HStack(spacing: 12) {
+                        Button { documentPage -= 1 } label: { Image(systemName: "chevron.up") }
+                            .disabled(documentPage == 0).accessibilityLabel(L("上一组文件"))
+                        Text("\(documentPage + 1) / \((workspace.documents.count + documentRows - 1) / documentRows)").monospacedDigit()
+                        Button { documentPage += 1 } label: { Image(systemName: "chevron.down") }
+                            .disabled((documentPage + 1) * documentRows >= workspace.documents.count).accessibilityLabel(L("下一组文件"))
                     }
                 }
             }
-            Button(L(loading ? "正在导入…" : "导入 Guitar Pro")) { importing = true }.disabled(loading)
         }
         .font(.editorial(size: 12 * scale)).buttonStyle(.plain)
         .padding(.horizontal, 24).padding(.top, 12)
+        .onAppear { revealSelectedDocument() }
+        .onChange(of: workspace.selectedID) { _ in revealSelectedDocument() }
+        .onChange(of: workspace.documents.count) { _ in
+            documentPage = min(documentPage, max(0, (workspace.documents.count - 1) / documentRows))
+        }
+        .onChange(of: documentRows) { _ in revealSelectedDocument() }
+    }
+    private func revealSelectedDocument() {
+        if let index = workspace.documents.firstIndex(where: { $0.id == workspace.selectedID }) {
+            documentPage = index / documentRows
+        } else { documentPage = 0 }
     }
     private var demoBody: some View {
         VStack(spacing: 16) {
