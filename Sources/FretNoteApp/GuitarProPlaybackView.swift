@@ -55,6 +55,7 @@ struct GuitarProPlaybackView: View, Localizable {
         guard let frame else { return "" }
         var labels: [String] = []
         if frame.notes.contains(where: { !$0.bend.isEmpty }) { labels.append(L("推弦")) }
+        if frame.notes.contains(where: { ($0.vibrato ?? 0) > 0 }) { labels.append(L("揉弦")) }
         if frame.notes.contains(where: \.slide) { labels.append(L("滑音")) }
         if frame.notes.contains(where: \.legato) { labels.append(L("击勾弦")) }
         if frame.notes.contains(where: \.tie) { labels.append(L("延音")) }

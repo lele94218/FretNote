@@ -52,6 +52,7 @@ struct GuitarProScore: Codable, Sendable {
         let tie: Bool
         let slide: Bool
         let legato: Bool
+        var vibrato: Int? = nil
     }
     struct Bend: Codable, Sendable { let offset: Double; let semitones: Double }
 

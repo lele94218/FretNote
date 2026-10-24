@@ -51,6 +51,7 @@ export function parse(bytes) {
                     if(n.string<1 || n.string>6 || n.fret<0) continue;
                     unique.set(n.id, {string:7-n.string, fret:n.fret,
                         bend:(n.bendPoints || []).map(p=>({offset:p.offset/60, semitones:p.value/2})),
+                        vibrato:Math.max(n.vibrato || 0, beat.vibrato || 0, n.isTieDestination ? (n.tieOrigin?.vibrato || 0) : 0),
                         tie:n.isTieDestination, slide:n.slideInType!==0 || n.slideOutType!==0,
                         legato:n.isHammerPullOrigin || n.isHammerPullDestination});
                 }
@@ -89,5 +90,5 @@ export function parse(bytes) {
         }
         tracks.push({id:track.index,name:track.name,supported:supported && frames.every(f=>f.notes.every(n=>n.fret<=21)),frames,events,barActivity:[...barActivity]});
     }
-    return JSON.stringify({importVersion:2,title:score.title || 'Guitar Pro',tempo:score.tempo,barCount:score.masterBars.length,tracks,beats});
+    return JSON.stringify({importVersion:3,title:score.title || 'Guitar Pro',tempo:score.tempo,barCount:score.masterBars.length,tracks,beats});
 }

@@ -6,6 +6,8 @@ struct ScoreBendDisplay: Equatable {
     let semitones: Double
     let target: Double
     let releasing: Bool
+    var vibrato = false
+    var isBend = true
     /// Visual string deflection in instrument coordinates, independent of camera zoom.
     /// Nut and bridge remain fixed; the finger pulls the string at the original fret.
     func stringDisplacement(at x: CGFloat) -> CGFloat {
@@ -16,7 +18,7 @@ struct ScoreBendDisplay: Equatable {
         let envelope = x <= contact ? x / contact : (bridge - x) / (bridge - contact)
         // This view places the treble strings at the top: push inward, not off the neck.
         let direction: CGFloat = position.string <= 3 ? 1 : -1
-        return direction * min(48, max(0, CGFloat(semitones)) * 16) * envelope
+        return direction * min(48, max(vibrato ? -48 : 0, CGFloat(semitones) * 16)) * envelope
     }
     var progress: Double { min(1, max(0, semitones / max(0.01, target))) }
     var amountLabel: String {
@@ -51,7 +53,8 @@ struct ScoreBendDisplay: Equatable {
                     if !tied.tie { break }
                 }
             }
-            guard !points.isEmpty else { return nil }
+            let vibrato = (note.vibrato ?? 0) > 0
+            guard !points.isEmpty || vibrato else { return nil }
             let events = track.events.prefix { $0.time <= time }
             let channel = events.last { $0.kind == 1 && $0.key == position.midi }?.channel ?? 0
             var wheel = 8192, channelWheel = 8192, range = 2.0, cents = 0.0
@@ -60,6 +63,7 @@ struct ScoreBendDisplay: Equatable {
             var hasWheel = false
             var lastWheelTime: Double?
             var noteStart = frame.start
+            var lastChannelWheelTime: Double?
             for event in events where event.channel == channel {
                 if event.kind == 1 && event.key == position.midi { releasing = false; noteStart = event.time }
                 if event.kind == 3 {
@@ -72,7 +76,7 @@ struct ScoreBendDisplay: Equatable {
                 } else if event.kind == 6 && event.key == position.midi {
                     if event.value != wheel { releasing = event.value < wheel }
                     wheel = event.value; hasWheel = true; lastWheelTime = event.time
-                } else if event.kind == 5 { channelWheel = event.value }
+                } else if event.kind == 5 { channelWheel = event.value; lastChannelWheelTime = event.time }
             }
             var visualWheel = Double(wheel)
             if hasWheel, let lastWheelTime {
@@ -90,10 +94,24 @@ struct ScoreBendDisplay: Equatable {
                     }
                 }
             }
-            let amount = hasWheel ? (visualWheel + Double(channelWheel) - 16384) / 8192 * (range + cents) : (points.first?.semitones ?? 0)
-            let target = max(points.map(\.semitones).max() ?? 0, amount)
-            guard target > 0.01 else { return nil }
-            return Self(position: position, semitones: amount, target: target, releasing: releasing)
+            var visualChannelWheel = Double(channelWheel)
+            if let previous = lastChannelWheelTime {
+                let start = max(previous, noteStart)
+                for event in track.events.dropFirst(events.count) where event.channel == channel {
+                    if (event.kind == 1 || event.kind == 2) && event.key == position.midi { break }
+                    if event.kind == 5 {
+                        if event.time > start {
+                            visualChannelWheel += Double(event.value - channelWheel) * min(1, max(0, (time - start) / (event.time - start)))
+                        }
+                        break
+                    }
+                }
+            }
+            let amount = hasWheel || lastChannelWheelTime != nil
+                ? (visualWheel + visualChannelWheel - 16384) / 8192 * (range + cents) : (points.first?.semitones ?? 0)
+            let target = max(points.map(\.semitones).max() ?? (vibrato ? 0.5 : 0), amount)
+            guard target > 0.01 || vibrato else { return nil }
+            return Self(position: position, semitones: amount, target: target, releasing: releasing, vibrato: vibrato, isBend: !points.isEmpty)
         }
     }
 }

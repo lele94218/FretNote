@@ -60,6 +60,45 @@ final class ScoreBendDisplayTests: XCTestCase {
         let track = GuitarProScore.Track(id: 0, name: "Boundary", supported: true, frames: source.frames, events: events)
         XCTAssertEqual(try XCTUnwrap(ScoreBendDisplay.current(track: track, frame: track.frames[0], time: 0.55).first).semitones, 2)
     }
+    func testVibratoMovesBothDirectionsWithoutInventingBendLabel() throws {
+        var note = track().frames[0].notes[0]
+        note = .init(string: note.string, fret: note.fret, bend: [], tie: false, slide: false, legato: false, vibrato: 1)
+        let frame = GuitarProScore.Frame(start: 0, end: 1, bar: 1, notes: [note])
+        let events: [GuitarProScore.MIDIEvent] = [
+            .init(time: 0, kind: 1, channel: 1, key: 69, value: 95),
+            .init(time: 0, kind: 6, channel: 1, key: 69, value: 8192),
+            .init(time: 0.1, kind: 6, channel: 1, key: 69, value: 10240),
+            .init(time: 0.2, kind: 6, channel: 1, key: 69, value: 6144),
+            .init(time: 0.3, kind: 6, channel: 1, key: 69, value: 8192)
+        ]
+        let track = GuitarProScore.Track(id: 0, name: "Vibrato", supported: true, frames: [frame], events: events)
+        let up = try XCTUnwrap(ScoreBendDisplay.current(track: track, frame: frame, time: 0.1).first)
+        let down = try XCTUnwrap(ScoreBendDisplay.current(track: track, frame: frame, time: 0.2).first)
+        XCTAssertTrue(up.vibrato)
+        XCTAssertFalse(up.isBend)
+        XCTAssertEqual(up.semitones, 0.5)
+        XCTAssertEqual(down.semitones, -0.5)
+        let x = GuitarGeometry.noteX(note.fret)
+        XCTAssertGreaterThan(up.stringDisplacement(at: x), 0)
+        XCTAssertLessThan(down.stringDisplacement(at: x), 0)
+        XCTAssertEqual(down.stringDisplacement(at: 0), 0)
+        XCTAssertEqual(down.stringDisplacement(at: GuitarGeometry.scaleLength), 0)
+        let channelEvents = events.map { event in
+            GuitarProScore.MIDIEvent(time: event.time, kind: event.kind == 6 ? 5 : event.kind, channel: event.channel, key: event.key, value: event.value)
+        }
+        let beatTrack = GuitarProScore.Track(id: 0, name: "Beat vibrato", supported: true, frames: [frame], events: channelEvents)
+        XCTAssertEqual(try XCTUnwrap(ScoreBendDisplay.current(track: beatTrack, frame: frame, time: 0.05).first).semitones, 0.25, accuracy: 0.0001)
+    }
+    func testImportedNoteAndBeatVibrato() throws {
+        let url = try XCTUnwrap(Bundle.module.url(forResource: "vibrato", withExtension: "gp", subdirectory: "Fixtures"))
+        let score = try GuitarProScore.load(url)
+        let track = try XCTUnwrap(score.tracks.first)
+        XCTAssertEqual(track.frames[0].notes[0].vibrato, 1)
+        XCTAssertTrue(track.frames.contains { $0.notes.contains { $0.vibrato == 2 } })
+        let frame = track.frames[0]
+        let values = (0..<50).compactMap { ScoreBendDisplay.current(track: track, frame: frame, time: Double($0) * 0.01).first?.semitones }
+        XCTAssertGreaterThan((values.max() ?? 0) - (values.min() ?? 0), 0.05)
+    }
     func testStringDeflectionKeepsEndpointsFixedAndReturnsWithPitch() {
         let note = GuitarNote(string: 5, fret: 12)
         let peak = ScoreBendDisplay(position: note, semitones: 2, target: 2, releasing: false)

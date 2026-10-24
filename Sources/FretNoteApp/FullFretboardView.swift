@@ -159,6 +159,18 @@ struct GuitarInstrumentCanvas: View, Animatable {
             let note = bend.position
             let x = GuitarGeometry.noteX(note.fret)
             let y = GuitarGeometry.stringY(note.string, x: x) + bend.stringDisplacement(at: x)
+            if bend.vibrato {
+                // A short colored ripple identifies vibrato; movement follows the MIDI wheel.
+                var ripple = Path()
+                let amplitude = (2 + min(3, abs(bend.semitones) * 4)) / zoom
+                for sample in 0...32 {
+                    let dx = CGFloat(sample) / 32 * 28 / zoom
+                    let point = CGPoint(x: x + 12 / zoom + dx,
+                        y: y + sin(CGFloat(sample) / 32 * .pi * 4 + CGFloat(bend.semitones) * 4) * amplitude)
+                    if sample == 0 { ripple.move(to: point) } else { ripple.addLine(to: point) }
+                }
+                context.stroke(ripple, with: .color(accent), lineWidth: 2 / zoom)
+            }
             let labelX = camera.center + (CGFloat(index) - CGFloat(bends.count - 1) / 2) * 156 / zoom
             let labelY = max(-110 - 22 / zoom, -visibleHeight / 2 + 34 / zoom)
             let rect = CGRect(x: labelX - 72 / zoom, y: labelY - 29 / zoom, width: 144 / zoom, height: 58 / zoom)
@@ -167,11 +179,11 @@ struct GuitarInstrumentCanvas: View, Animatable {
             leader.addLine(to: CGPoint(x: labelX, y: rect.maxY))
             context.stroke(leader, with: .color(accent.opacity(0.7)), style: StrokeStyle(lineWidth: 1 / zoom, dash: [2 / zoom, 3 / zoom]))
             context.fill(Path(roundedRect: rect, cornerRadius: 3 / zoom), with: .color(accent))
-            context.draw(Text(scaleEstimate.map { $0.degree(midi: note.midi) + " → " + $0.degree(midi: note.midi + Int(bend.target.rounded())) } ?? bend.pitchLabel).font(.editorial(size: 13 / zoom, weight: .semibold)).foregroundColor(.black), at: CGPoint(x: labelX, y: labelY - 15 / zoom))
-            context.draw(Text((bend.releasing ? "↓ " : "↑ ") + bend.amountLabel).font(.editorial(size: 16 / zoom, weight: .semibold)).foregroundColor(.black), at: CGPoint(x: labelX, y: labelY + 3 / zoom))
+            context.draw(Text(!bend.isBend ? (scaleEstimate?.degree(midi: note.midi) ?? note.fullName) : (scaleEstimate.map { $0.degree(midi: note.midi) + " → " + $0.degree(midi: note.midi + Int(bend.target.rounded())) } ?? bend.pitchLabel)).font(.editorial(size: 13 / zoom, weight: .semibold)).foregroundColor(.black), at: CGPoint(x: labelX, y: labelY - 15 / zoom))
+            context.draw(Text(bend.isBend ? (bend.releasing ? "↓ " : "↑ ") + bend.amountLabel : "≈").font(.editorial(size: 16 / zoom, weight: .semibold)).foregroundColor(.black), at: CGPoint(x: labelX, y: labelY + 3 / zoom))
             let meter = CGRect(x: labelX - 60 / zoom, y: labelY + 19 / zoom, width: 120 / zoom, height: 3 / zoom)
             context.fill(Path(meter), with: .color(.black.opacity(0.2)))
-            context.fill(Path(CGRect(x: meter.minX, y: meter.minY, width: meter.width * bend.progress, height: meter.height)), with: .color(.black))
+            context.fill(Path(CGRect(x: meter.minX, y: meter.minY, width: meter.width * (bend.isBend ? bend.progress : min(1, abs(bend.semitones) / max(0.01, bend.target))), height: meter.height)), with: .color(.black))
         }
     }
 }

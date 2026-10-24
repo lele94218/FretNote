@@ -40,7 +40,7 @@ final class GuitarProWorkspace: ObservableObject {
     }
     /// Upgrade parsed caches from their archived sources without losing open tabs.
     func refreshImportedScores() async {
-        for document in documents where document.score.importVersion != 2 {
+        for document in documents where document.score.importVersion != 3 {
             guard let data = document.sourceData else { continue }
             do {
                 let score = try await Task.detached(priority: .userInitiated) { try GuitarProScore.load(data: data) }.value
