@@ -13,6 +13,7 @@ struct GuitarProPlaybackView: View, Localizable {
     @StateObject private var audio = ScoreMIDIPlayer()
     @State private var volume = 0.65
     @State private var resumePosition: Double?
+    @State private var playbackPosition = 0.0
     @State private var audioError: String?
     @State private var trackID: Int
     @State private var firstBar = 1
@@ -35,6 +36,13 @@ struct GuitarProPlaybackView: View, Localizable {
     }
     private var frame: GuitarProScore.Frame? { frames.indices.contains(step) ? frames[step] : nil }
     private var nextPositions: [GuitarNote] { frames.dropFirst(step + 1).first { !$0.notes.isEmpty }?.positions ?? [] }
+    private var bends: [ScoreBendDisplay] {
+        guard let track = score.tracks.first(where: { $0.id == trackID }), let frame else { return [] }
+        let source = track.frames.filter { $0.bar >= firstBar && $0.bar <= lastBar }
+        guard source.indices.contains(step) else { return [] }
+        let elapsed = min(frame.end - frame.start, max(0, playbackPosition * speed - frame.start))
+        return ScoreBendDisplay.current(track: track, frame: source[step], time: source[step].start + elapsed)
+    }
     private var techniques: String {
         guard let frame else { return "" }
         var labels: [String] = []
@@ -77,7 +85,7 @@ struct GuitarProPlaybackView: View, Localizable {
             }.foregroundStyle(palette.muted).lineLimit(1)
             GuitarInstrumentCanvas(camera: camera, notes: [], current: 0, dark: scheme == .dark,
                                   activePositions: frame?.positions ?? [], upcomingPositions: nextPositions,
-                                  barPositions: ScoreBarPositions.positions(in: frames, at: step))
+                                  barPositions: ScoreBarPositions.positions(in: frames, at: step), bends: bends)
                 .animation(reduceMotion ? nil : .easeInOut(duration: FretboardPlaybackTimeline.cameraAnimation), value: camera)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             HStack(spacing: 16) {
@@ -130,6 +138,7 @@ struct GuitarProPlaybackView: View, Localizable {
                 var previousPosition = audio.position
                 while !Task.isCancelled {
                     let position = audio.position
+                    playbackPosition = position
                     if position + 0.001 < previousPosition {
                         step = 0; nextCue = 1; settle()
                     }
@@ -148,7 +157,7 @@ struct GuitarProPlaybackView: View, Localizable {
             catch { audioError = error.localizedDescription; playing = false }
         }
     }
-    private func seek(_ index: Int) { playing = false; audio.stop(); resumePosition = nil; step = index; settle() }
+    private func seek(_ index: Int) { playing = false; audio.stop(); resumePosition = nil; step = index; playbackPosition = (frame?.start ?? 0) / speed; settle() }
     private func lookAhead(_ index: Int) -> [GuitarNote] {
         guard frames.indices.contains(index) else { return [] }
         let end = frames[index].start + 1.6 * speed

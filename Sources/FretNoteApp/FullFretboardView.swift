@@ -11,6 +11,7 @@ struct GuitarInstrumentCanvas: View, Animatable {
     var activePositions: [GuitarNote]? = nil
     var upcomingPositions: [GuitarNote]? = nil
     var barPositions: [GuitarNote] = []
+    var bends: [ScoreBendDisplay] = []
     var animatableData: AnimatablePair<CGFloat, CGFloat> {
         get { AnimatablePair(camera.center, camera.width) }
         set { camera = FretboardCamera(center: newValue.first, width: newValue.second) }
@@ -60,24 +61,30 @@ struct GuitarInstrumentCanvas: View, Animatable {
         let active = activePositions ?? (notes.indices.contains(current) ? [notes[current]] : [])
         for string in 1...6 {
             let gauge: CGFloat = [0.55, 0.75, 1.05, 1.5, 2.0, 2.6][string - 1]
+            let bend = bends.first { $0.position.string == string && $0.position.fret > 0 }
+            let contactX = bend.map { GuitarGeometry.noteX($0.position.fret) }
+            func point(_ x: CGFloat) -> CGPoint {
+                CGPoint(x: x, y: GuitarGeometry.stringY(string, x: x) + (bend?.stringDisplacement(at: x) ?? 0))
+            }
             var line = Path()
             line.move(to: NeckArtwork.tuningPost(string))
             line.addLine(to: CGPoint(x: -40, y: GuitarGeometry.stringY(string, x: 0)))
             line.addLine(to: CGPoint(x: 0, y: GuitarGeometry.stringY(string, x: 0)))
-            line.addLine(to: CGPoint(x: GuitarGeometry.scaleLength, y: GuitarGeometry.stringY(string, x: GuitarGeometry.scaleLength)))
+            if let contactX { line.addLine(to: point(contactX)) }
+            line.addLine(to: point(GuitarGeometry.scaleLength))
             context.stroke(line, with: .color(.black.opacity(0.8)), lineWidth: gauge + 1.3)
             context.stroke(line, with: .color(Color(white: string > 3 ? 0.65 : 0.87)), lineWidth: gauge)
             context.stroke(line, with: .color(.white.opacity(0.7)), lineWidth: max(0.3, gauge * 0.24))
             if let note = active.first(where: { $0.string == string && (0...21).contains($0.fret) }) {
-                let stop = GuitarGeometry.fretX(note.fret)
+                let stop = contactX ?? GuitarGeometry.fretX(note.fret)
                 var muted = Path()
                 muted.move(to: CGPoint(x: 0, y: GuitarGeometry.stringY(string, x: 0)))
-                muted.addLine(to: CGPoint(x: stop, y: GuitarGeometry.stringY(string, x: stop)))
+                muted.addLine(to: point(stop))
                 context.stroke(muted, with: .color(accent.opacity(0.45)), lineWidth: 1.5 / zoom)
                 // The sounding length runs from the fretted contact to the bridge.
                 var sounding = Path()
-                sounding.move(to: CGPoint(x: stop, y: GuitarGeometry.stringY(string, x: stop)))
-                sounding.addLine(to: CGPoint(x: GuitarGeometry.scaleLength, y: GuitarGeometry.stringY(string, x: GuitarGeometry.scaleLength)))
+                sounding.move(to: point(stop))
+                sounding.addLine(to: point(GuitarGeometry.scaleLength))
                 context.stroke(sounding, with: .color(accent.opacity(0.18)), lineWidth: 4 / zoom)
                 context.stroke(sounding, with: .color(accent), lineWidth: 2 / zoom)
             }
@@ -91,9 +98,11 @@ struct GuitarInstrumentCanvas: View, Animatable {
         } ?? (min(notes.count, max(0, current - 2))..<min(notes.count, max(0, current + 3))).map { (notes[$0], $0 - current) }
         for (note, relative) in markers {
             guard (0...21).contains(note.fret), (1...6).contains(note.string) else { continue }
-            let x = GuitarGeometry.noteX(note.fret), y = GuitarGeometry.stringY(note.string, x: x)
+            let x = GuitarGeometry.noteX(note.fret)
+            let displacement = relative == 0 ? bends.first(where: { $0.position == note })?.stringDisplacement(at: x) ?? 0 : 0
+            let y = GuitarGeometry.stringY(note.string, x: x) + displacement
             let radius = GuitarGeometry.markerRadius(x: x, zoom: zoom) * (relative == 0 ? 1 : (relative == 1 ? 0.8 : 0.65))
-            if relative == 0 && active.count == 1 {
+            if relative == 0 && active.count == 1 && !bends.contains(where: { $0.position == note }) {
                 let labelY = max(-100 - 18 / zoom, -visibleHeight / 2 + 22 / zoom)
                 var leader = Path(); leader.move(to: CGPoint(x: x, y: y - radius - 1))
                 leader.addLine(to: CGPoint(x: x, y: labelY + 17 / zoom))
@@ -105,6 +114,26 @@ struct GuitarInstrumentCanvas: View, Animatable {
             let dot = Path(ellipseIn: CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2))
             context.fill(dot, with: .color(relative == 0 ? accent : (relative == 1 ? upcomingAccent : (relative < 0 ? .white.opacity(0.35) : .white))))
             context.stroke(dot, with: .color(.black), lineWidth: radius * 0.3)
+        }
+        // The fretting dot follows its displaced string while keeping the same fret.
+        // Instructions stay outside the neck and follow the audio clock.
+        for (index, bend) in bends.enumerated() {
+            let note = bend.position
+            let x = GuitarGeometry.noteX(note.fret)
+            let y = GuitarGeometry.stringY(note.string, x: x) + bend.stringDisplacement(at: x)
+            let labelX = camera.center + (CGFloat(index) - CGFloat(bends.count - 1) / 2) * 156 / zoom
+            let labelY = max(-110 - 22 / zoom, -visibleHeight / 2 + 34 / zoom)
+            let rect = CGRect(x: labelX - 72 / zoom, y: labelY - 29 / zoom, width: 144 / zoom, height: 58 / zoom)
+            var leader = Path()
+            leader.move(to: CGPoint(x: x, y: y - GuitarGeometry.markerRadius(x: x, zoom: zoom) - 2 / zoom))
+            leader.addLine(to: CGPoint(x: labelX, y: rect.maxY))
+            context.stroke(leader, with: .color(accent.opacity(0.7)), style: StrokeStyle(lineWidth: 1 / zoom, dash: [2 / zoom, 3 / zoom]))
+            context.fill(Path(roundedRect: rect, cornerRadius: 3 / zoom), with: .color(accent))
+            context.draw(Text(bend.pitchLabel).font(.editorial(size: 13 / zoom, weight: .semibold)).foregroundColor(.black), at: CGPoint(x: labelX, y: labelY - 15 / zoom))
+            context.draw(Text((bend.releasing ? "↓ " : "↑ ") + bend.amountLabel).font(.editorial(size: 16 / zoom, weight: .semibold)).foregroundColor(.black), at: CGPoint(x: labelX, y: labelY + 3 / zoom))
+            let meter = CGRect(x: labelX - 60 / zoom, y: labelY + 19 / zoom, width: 120 / zoom, height: 3 / zoom)
+            context.fill(Path(meter), with: .color(.black.opacity(0.2)))
+            context.fill(Path(CGRect(x: meter.minX, y: meter.minY, width: meter.width * bend.progress, height: meter.height)), with: .color(.black))
         }
     }
 }
