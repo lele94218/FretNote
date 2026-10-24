@@ -4,8 +4,9 @@ import CTinySoundFont
 struct MIDIPlaybackPlan: Sendable {
     var events: [GuitarProScore.MIDIEvent]
     var duration: Double
+    var clicks: [GuitarProScore.Beat] = []
 
-    init(track: GuitarProScore.Track, firstBar: Int, lastBar: Int, speed: Double) {
+    init(track: GuitarProScore.Track, firstBar: Int, lastBar: Int, speed: Double, beats: [GuitarProScore.Beat] = []) {
         guard speed > 0, speed.isFinite else { events = []; duration = 0; return }
         let frames = track.frames.filter { $0.bar >= firstBar && $0.bar <= lastBar }
         var spans: [(start: Double, end: Double)] = []
@@ -32,6 +33,9 @@ struct MIDIPlaybackPlan: Sendable {
             for event in track.events where event.time >= span.start && event.time < span.end {
                 events.append(event.at(duration + (event.time - span.start) / speed))
             }
+            clicks += beats.filter { $0.time >= span.start && $0.time < span.end }.map {
+                .init(time: duration + ($0.time - span.start) / speed, accent: $0.accent)
+            }
             duration += (span.end - span.start) / speed
         }
     }
@@ -41,6 +45,28 @@ struct MIDIPlaybackPlan: Sendable {
 /// neither the UI nor camera work can interrupt MIDI event scheduling.
 enum ScoreMIDIRenderer {
     static let sampleRate = 44_100.0
+    static func metronome(_ plan: MIDIPlaybackPlan) throws -> AVAudioPCMBuffer {
+        guard plan.duration > 0, plan.duration <= 1200,
+              let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1),
+              let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount((plan.duration * sampleRate).rounded())) else {
+            throw GuitarProScore.ImportError.invalid("无法准备节拍器")
+        }
+        buffer.frameLength = buffer.frameCapacity
+        let output = buffer.floatChannelData![0]
+        output.initialize(repeating: 0, count: Int(buffer.frameLength))
+        for beat in plan.clicks {
+            try Task.checkCancellation()
+            let start = Int((beat.time * sampleRate).rounded())
+            let length = min(Int(sampleRate * 0.035), Int(buffer.frameLength) - start)
+            guard start >= 0, length > 0 else { continue }
+            for i in 0..<length {
+                let t = Double(i) / sampleRate
+                let attack = min(1, t / 0.001)
+                output[start + i] += Float(sin(2 * .pi * (beat.accent ? 1800 : 1200) * t) * exp(-t * 140) * attack * (beat.accent ? 0.55 : 0.35))
+            }
+        }
+        return buffer
+    }
     static func render(_ plan: MIDIPlaybackPlan) throws -> AVAudioPCMBuffer {
         guard plan.duration > 0, plan.duration <= 1200,
               let font = Bundle.module.url(forResource: "sonivox", withExtension: "sf2"),
@@ -86,6 +112,9 @@ enum ScoreMIDIRenderer {
 final class ScoreMIDIPlayer: ObservableObject {
     private let engine = AVAudioEngine()
     private let node = AVAudioPlayerNode()
+    private let clickNode = AVAudioPlayerNode()
+    private var clickBuffer: AVAudioPCMBuffer?
+    var metronomeEnabled = false { didSet { clickNode.volume = metronomeEnabled ? volume : 0 } }
     private var cacheKey = ""
     private var buffer: AVAudioPCMBuffer?
     private var startOffset = 0.0
@@ -94,15 +123,18 @@ final class ScoreMIDIPlayer: ObservableObject {
     private var active = false
     private var generation = 0
     @Published var preparing = false
-    var volume: Float = 0.65 { didSet { node.volume = volume } }
+    var volume: Float = 0.65 { didSet { node.volume = volume; clickNode.volume = metronomeEnabled ? volume : 0 } }
 
     init() {
         engine.attach(node)
+        engine.attach(clickNode)
         let format = AVAudioFormat(standardFormatWithSampleRate: ScoreMIDIRenderer.sampleRate, channels: 1)!
         engine.connect(node, to: engine.mainMixerNode, format: format)
         node.volume = volume
+        engine.connect(clickNode, to: engine.mainMixerNode, format: format)
+        clickNode.volume = 0
     }
-    func prepare(track: GuitarProScore.Track, first: Int, last: Int, speed: Double) async throws {
+    func prepare(track: GuitarProScore.Track, first: Int, last: Int, speed: Double, beats: [GuitarProScore.Beat] = []) async throws {
         let key = "\(track.id):\(first):\(last):\(speed)"
         if cacheKey == key, buffer != nil { return }
         generation += 1
@@ -110,34 +142,40 @@ final class ScoreMIDIPlayer: ObservableObject {
         preparing = true
         defer { if token == generation { preparing = false } }
         let task = Task.detached(priority: .userInitiated) {
-            try ScoreMIDIRenderer.render(MIDIPlaybackPlan(track: track, firstBar: first, lastBar: last, speed: speed))
+            let plan = MIDIPlaybackPlan(track: track, firstBar: first, lastBar: last, speed: speed, beats: beats)
+            return (try ScoreMIDIRenderer.render(plan), try ScoreMIDIRenderer.metronome(plan))
         }
         let rendered = try await withTaskCancellationHandler(operation: { try await task.value }, onCancel: { task.cancel() })
         try Task.checkCancellation()
         guard token == generation else { throw CancellationError() }
-        buffer = rendered; cacheKey = key
+        buffer = rendered.0; clickBuffer = rendered.1; cacheKey = key
     }
     func play(from seconds: Double, looping: Bool) throws {
         guard let buffer else { return }
-        node.stop()
+        node.stop(); clickNode.stop()
         duration = Double(buffer.frameLength) / buffer.format.sampleRate
         startOffset = min(max(0, seconds), max(0, duration - 1 / buffer.format.sampleRate))
         loops = looping
         let offset = AVAudioFrameCount((startOffset * buffer.format.sampleRate).rounded())
-        if offset == 0 {
-            node.scheduleBuffer(buffer, at: nil, options: looping ? [.loops] : [], completionHandler: nil)
-        } else {
-            let length = buffer.frameLength - offset
-            guard let remainder = AVAudioPCMBuffer(pcmFormat: buffer.format, frameCapacity: length) else {
-                throw GuitarProScore.ImportError.invalid("无法分配音频缓冲区")
+        func schedule(_ buffer: AVAudioPCMBuffer, on node: AVAudioPlayerNode) throws {
+            if offset == 0 {
+                node.scheduleBuffer(buffer, at: nil, options: looping ? [.loops] : [], completionHandler: nil)
+            } else {
+                let length = buffer.frameLength - offset
+                guard let remainder = AVAudioPCMBuffer(pcmFormat: buffer.format, frameCapacity: length) else {
+                    throw GuitarProScore.ImportError.invalid("无法分配音频缓冲区")
+                }
+                remainder.frameLength = length
+                remainder.floatChannelData![0].update(from: buffer.floatChannelData![0].advanced(by: Int(offset)), count: Int(length))
+                node.scheduleBuffer(remainder)
+                if looping { node.scheduleBuffer(buffer, at: nil, options: [.loops], completionHandler: nil) }
             }
-            remainder.frameLength = length
-            remainder.floatChannelData![0].update(from: buffer.floatChannelData![0].advanced(by: Int(offset)), count: Int(length))
-            node.scheduleBuffer(remainder)
-            if looping { node.scheduleBuffer(buffer, at: nil, options: [.loops], completionHandler: nil) }
         }
+        try schedule(buffer, on: node)
+        if let clickBuffer { try schedule(clickBuffer, on: clickNode) }
         try engine.start()
-        node.play(); active = true
+        let start = AVAudioTime(hostTime: mach_absolute_time() + AVAudioTime.hostTime(forSeconds: 0.02))
+        node.play(at: start); clickNode.play(at: start); active = true
     }
     /// Musical position comes from rendered audio samples, not a wall-clock timer.
     var position: Double {
@@ -151,5 +189,5 @@ final class ScoreMIDIPlayer: ObservableObject {
         let current = position
         try play(from: current, looping: enabled)
     }
-    func stop() { active = false; node.stop(); engine.stop() }
+    func stop() { active = false; node.stop(); clickNode.stop(); engine.stop() }
 }

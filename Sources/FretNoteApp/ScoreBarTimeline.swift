@@ -22,9 +22,7 @@ struct ScoreBarSegment: Identifiable {
         return result
     }
 
-    func progress(at time: Double) -> Double {
-        min(1, max(0, (time - start) / max(0.001, end - start)))
-    }
+
 }
 
 struct ScoreBarTimeline: View, Localizable {
@@ -32,57 +30,86 @@ struct ScoreBarTimeline: View, Localizable {
     @Environment(\.interfaceScale) private var scale
     let segments: [ScoreBarSegment]
     let step: Int
-    /// Score time, before playback speed is applied.
-    let position: Double
     let seek: (Int) -> Void
-
+    var tracks: [GuitarProScore.Track] = []
+    var selectedTrackID: Int = 0
+    var selectTrackBar: ((Int, Int) -> Void)? = nil
+    @State private var page = 0
     private var currentID: Int? { segments.last(where: { $0.id <= step })?.id }
+    private var currentColumn: Int { segments.lastIndex(where: { $0.id <= step }) ?? 0 }
+    private var rowLimit: Int { scale > 1.4 ? 4 : 6 }
+    private var visibleTracks: [GuitarProScore.Track] { Array(tracks.dropFirst(page * rowLimit).prefix(rowLimit)) }
+    private var rowHeight: CGFloat { 22 * scale }
     private var accent: Color { Color(red: 0.20, green: 0.85, blue: 0.96) }
 
     var body: some View {
-        GeometryReader { geometry in
-            let cellWidth = min(48 * scale, max(30 * scale, (geometry.size.width - CGFloat(max(0, segments.count - 1)) * 2) / CGFloat(max(1, segments.count))))
-            ScrollViewReader { proxy in
-                ScrollView(.horizontal, showsIndicators: true) {
-                    HStack(spacing: 2) {
-                        ForEach(segments) { segment in
-                            let current = segment.id == currentID
-                            let past = segment.id < (currentID ?? 0)
-                            Button { seek(segment.id) } label: {
-                                VStack(spacing: 5) {
-                                    Text("\(segment.bar)")
-                                        .font(.editorial(size: 11 * scale))
-                                        .monospacedDigit()
-                                        .foregroundStyle(current ? Color.primary : Color.secondary)
-                                    ZStack(alignment: .leading) {
-                                        Rectangle().fill(current ? accent.opacity(0.25) : Color.primary.opacity(segment.hasNotes ? (past ? 0.22 : 0.11) : 0.025))
-                                        if current {
-                                            Rectangle().fill(accent.opacity(0.5))
-                                                .frame(width: cellWidth * segment.progress(at: position))
-                                            Rectangle().fill(Color.primary)
-                                                .frame(width: 2)
-                                                .offset(x: max(0, (cellWidth - 2) * segment.progress(at: position)))
-                                        }
-                                        Rectangle().strokeBorder(current ? accent : Color.primary.opacity(0.2), lineWidth: current ? 2 : 0.5)
-                                    }.frame(height: 24 * scale)
-                                }
-                                .frame(width: cellWidth)
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("\(L("小节")) \(segment.bar)")
-                            .accessibilityValue(current ? L("当前小节") : "")
-                            .help("\(L("跳到小节")) \(segment.bar)")
-                            .id(segment.id)
+        HStack(alignment: .top, spacing: 8) {
+            if !tracks.isEmpty {
+                VStack(spacing: 2) {
+                    HStack {
+                        Text(L("音轨"))
+                        Spacer()
+                        if tracks.count > rowLimit {
+                            Button { page = max(0, page - 1) } label: { Image(systemName: "chevron.up") }.disabled(page == 0).accessibilityLabel(L("上一组音轨"))
+                            Button { page += 1 } label: { Image(systemName: "chevron.down") }.disabled((page + 1) * rowLimit >= tracks.count).accessibilityLabel(L("下一组音轨"))
                         }
-                    }.padding(.bottom, 10)
-                }
-                .onChange(of: currentID) { id in
-                    // Reveal only when outside the viewport; never delay audio playback.
-                    if let id { proxy.scrollTo(id) }
-                }
-                .onAppear { if let currentID { proxy.scrollTo(currentID) } }
+                    }.frame(height: 18 * scale)
+                    ForEach(visibleTracks) { track in
+                        Button { selectTrackBar?(track.id, currentColumn) } label: {
+                            Text(track.name).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+                                .foregroundStyle(track.id == selectedTrackID ? Color.primary : Color.secondary)
+                                .frame(height: rowHeight)
+                                .contentShape(Rectangle())
+                        }.disabled(!track.supported)
+                            .help(track.supported ? track.name : L("此音轨仅显示概览"))
+                    }
+                }.frame(width: 125 * scale)
             }
-        }.frame(height: 50 * scale)
+            GeometryReader { geometry in
+                let width = min(48 * scale, max(26 * scale, (geometry.size.width - CGFloat(max(0, segments.count - 1)) * 2) / CGFloat(max(1, segments.count))))
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal, showsIndicators: true) {
+                        HStack(spacing: 2) {
+                            ForEach(Array(segments.enumerated()), id: \.element.id) { column, segment in
+                                VStack(spacing: 2) {
+                                    Text("\(segment.bar)").monospacedDigit().frame(height: 18 * scale)
+                                    if tracks.isEmpty {
+                                        cell(segment: segment, filled: segment.hasNotes, selected: true, width: width) { seek(segment.id) }
+                                    } else {
+                                        ForEach(visibleTracks) { track in
+                                            cell(segment: segment,
+                                                 filled: track.barActivity?.contains(segment.bar) ?? track.frames.contains { $0.bar == segment.bar && !$0.notes.isEmpty },
+                                                 selected: track.id == selectedTrackID, width: width) {
+                                                selectTrackBar?(track.id, column)
+                                            }.disabled(!track.supported)
+                                        }
+                                    }
+                                }.frame(width: width).id(segment.id)
+                            }
+                        }.padding(.bottom, 10)
+                    }
+                    .onChange(of: currentID) { if let id = $0 { proxy.scrollTo(id) } }
+                    .onAppear { if let currentID { proxy.scrollTo(currentID) } }
+                }
+            }
+        }
+        .font(.editorial(size: 11 * scale)).buttonStyle(.plain)
+        .frame(height: 18 * scale + CGFloat(max(1, visibleTracks.count)) * (rowHeight + 2) + 12)
+        .onChange(of: selectedTrackID) { id in
+            if let index = tracks.firstIndex(where: { $0.id == id }) { page = index / rowLimit }
+        }
+    }
+
+    private func cell(segment: ScoreBarSegment, filled: Bool, selected: Bool, width: CGFloat, action: @escaping () -> Void) -> some View {
+        let current = segment.id == currentID
+        return Button(action: action) {
+            Rectangle()
+                .fill(current ? accent.opacity(selected ? 0.8 : 0.3) : Color.primary.opacity(filled ? 0.16 : 0.025))
+                .overlay(Rectangle().strokeBorder(current ? accent : Color.primary.opacity(0.18), lineWidth: current && selected ? 2 : 0.5))
+                .frame(width: width, height: rowHeight)
+        }
+        .accessibilityLabel("\(L("小节")) \(segment.bar)")
+        .accessibilityValue(current ? L("当前小节") : "")
+        .help("\(L("跳到小节")) \(segment.bar)")
     }
 }

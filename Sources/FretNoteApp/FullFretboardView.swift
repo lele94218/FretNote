@@ -178,7 +178,7 @@ struct FullFretboardView: View, Localizable {
             if !live && !workspace.documents.isEmpty { documentTabs }
             if !live, let document = workspace.selected {
                 GuitarProPlaybackView(score: document.score, embedded: embedded) { workspace.select(nil) }
-                    .id(document.id)
+                    .id(document.revision ?? document.id)
             } else { demoBody }
         }
         .fileImporter(isPresented: $importing, allowedContentTypes: ["gp3", "gp4", "gp5", "gpx", "gp"].compactMap { UTType(filenameExtension: $0) }, allowsMultipleSelection: false) { result in

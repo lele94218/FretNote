@@ -8,6 +8,25 @@ final class ScoreMIDITests: XCTestCase {
         let url = try XCTUnwrap(Bundle.module.url(forResource: "timing", withExtension: "gp5", subdirectory: "Fixtures"))
         return try XCTUnwrap(GuitarProScore.load(url).tracks.first)
     }
+    func testMetronomeFollowsRepeatsTempoAndSelectedRange() throws {
+        let url = try XCTUnwrap(Bundle.module.url(forResource: "timing", withExtension: "gp5", subdirectory: "Fixtures"))
+        let score = try GuitarProScore.load(url)
+        let beats = try XCTUnwrap(score.beats)
+        XCTAssertEqual(beats.map(\.time), [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7])
+        XCTAssertEqual(beats.filter(\.accent).map(\.time), [0, 2, 4])
+        let track = try XCTUnwrap(score.tracks.first)
+        let plan = MIDIPlaybackPlan(track: track, firstBar: 2, lastBar: 2, speed: 0.5, beats: beats)
+        XCTAssertEqual(plan.clicks.map(\.time), [0, 2, 4, 6])
+        let buffer = try ScoreMIDIRenderer.metronome(plan)
+        XCTAssertEqual(buffer.frameLength, 8 * 44100)
+        let samples = buffer.floatChannelData![0]
+        func peak(_ time: Double) -> Float {
+            (0..<1000).map { abs(samples[Int(time * 44100) + $0]) }.max()!
+        }
+        XCTAssertGreaterThan(peak(0), peak(2))
+        XCTAssertGreaterThan(peak(2), 0.1)
+        XCTAssertEqual(peak(1), 0)
+    }
     func testRenderedRhythmPitchAndReducedSpeed() throws {
         let track = try fixture()
         XCTAssertTrue(track.events.contains { $0.kind == 6 && $0.value > 8192 })

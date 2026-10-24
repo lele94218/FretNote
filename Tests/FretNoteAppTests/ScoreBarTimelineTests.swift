@@ -14,11 +14,6 @@ final class ScoreBarTimelineTests: XCTestCase {
         XCTAssertEqual(bars.map(\.id), [0, 2, 3])
         XCTAssertEqual(bars.map(\.bar), [1, 2, 1])
         XCTAssertEqual(bars[0].end, 3)
-        // Progress represents elapsed duration, not the number of notes.
-        XCTAssertEqual(bars[0].progress(at: 1.5), 0.5)
-        XCTAssertEqual(bars[1].progress(at: 5), 0.5)
-        XCTAssertEqual(bars[1].progress(at: 0), 0)
-        XCTAssertEqual(bars[1].progress(at: 20), 1)
         XCTAssertTrue(ScoreBarSegment.make(frames: []).isEmpty)
     }
 
@@ -26,11 +21,15 @@ final class ScoreBarTimelineTests: XCTestCase {
     func testPreview() throws {
         guard let path = ProcessInfo.processInfo.environment["FRETNOTE_TIMELINE_SNAPSHOT"] else { return }
         let bars = (0..<24).map { ScoreBarSegment(id: $0, bar: $0 + 1, start: Double($0 * 4), end: Double(($0 + 1) * 4), hasNotes: $0 != 9) }
-        let view = ScoreBarTimeline(segments: bars, step: 6, position: 26, seek: { _ in })
-            .padding(24).frame(width: 960, height: 110).background(Color.white)
+        let tracks = (0..<4).map { index in
+            GuitarProScore.Track(id: index, name: ["Lead guitar", "Rhythm guitar", "Bass", "Drums"][index], supported: index < 2,
+                                frames: [], events: [], barActivity: Array((index + 1)...24))
+        }
+        let view = ScoreBarTimeline(segments: bars, step: 6, seek: { _ in }, tracks: tracks, selectedTrackID: 0)
+            .padding(24).frame(width: 960, height: 190).background(Color.white)
             .environment(\.colorScheme, .light)
         let hosting = NSHostingView(rootView: view)
-        hosting.frame = NSRect(x: 0, y: 0, width: 960, height: 110)
+        hosting.frame = NSRect(x: 0, y: 0, width: 960, height: 190)
         hosting.layoutSubtreeIfNeeded()
         let bitmap = try XCTUnwrap(hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds))
         hosting.cacheDisplay(in: hosting.bounds, to: bitmap)

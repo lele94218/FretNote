@@ -12,6 +12,8 @@ struct GuitarProPlaybackView: View, Localizable {
     let score: GuitarProScore
     let close: () -> Void
     @StateObject private var audio = ScoreMIDIPlayer()
+    @State private var metronome = false
+    @State private var pendingFrameIndex: Int?
     @State private var volume = 0.65
     @State private var resumePosition: Double?
     @State private var playbackPosition = 0.0
@@ -90,7 +92,7 @@ struct GuitarProPlaybackView: View, Localizable {
                 .animation(reduceMotion ? nil : .easeInOut(duration: FretboardPlaybackTimeline.cameraAnimation), value: camera)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             ScoreBarTimeline(segments: ScoreBarSegment.make(frames: frames), step: step,
-                             position: playbackPosition * speed, seek: seek)
+                             seek: seek, tracks: score.tracks, selectedTrackID: trackID, selectTrackBar: selectTrackBar)
             HStack(spacing: 16) {
                 Button { seek(max(0, step - 1)) } label: { Image(systemName: "backward.end") }.accessibilityLabel(L("上一个音"))
                 Button(L(playing ? "暂停" : "播放")) {
@@ -104,6 +106,9 @@ struct GuitarProPlaybackView: View, Localizable {
                 }.buttonStyle(EditorialButtonStyle(prominent: true)).disabled(frames.isEmpty).keyboardShortcut(.space, modifiers: [])
                 Button { seek(min(max(0, frames.count - 1), step + 1)) } label: { Image(systemName: "forward.end") }.accessibilityLabel(L("下一个音"))
                 Spacer()
+                Toggle(L("节拍器"), isOn: $metronome).toggleStyle(.checkbox)
+                    .disabled(score.beats == nil)
+                    .help(L(score.beats == nil ? "旧版曲目请重新导入一次以读取拍号" : "跟随乐谱拍号与速度"))
                 Image(systemName: volume == 0 ? "speaker.slash" : "speaker.wave.2").accessibilityHidden(true)
                 Slider(value: $volume, in: 0...1).frame(width: 90).accessibilityLabel(L("音量"))
                 Text("\(frames.isEmpty ? 0 : step + 1) / \(frames.count)").monospacedDigit()
@@ -114,10 +119,11 @@ struct GuitarProPlaybackView: View, Localizable {
         .buttonStyle(EditorialButtonStyle())
         .frame(minWidth: embedded ? 600 : 900, idealWidth: 960, minHeight: embedded ? 440 : 560, idealHeight: 620)
         .onAppear { settle() }
-        .onChange(of: trackID) { _ in seek(0) }
+        .onChange(of: trackID) { _ in seek(pendingFrameIndex ?? 0); pendingFrameIndex = nil }
         .onChange(of: firstBar) { _ in firstBar = max(1, min(score.barCount, firstBar)); lastBar = max(firstBar, lastBar); seek(0) }
         .onChange(of: lastBar) { _ in lastBar = max(firstBar, min(score.barCount, lastBar)); seek(0) }
         .onChange(of: speed) { _ in seek(step) }
+        .onChange(of: metronome) { audio.metronomeEnabled = $0 }
         .onChange(of: volume) { audio.volume = Float($0) }
         .onChange(of: playing) { if !$0 { audio.stop() } }
         .onChange(of: looping) { value in
@@ -131,9 +137,10 @@ struct GuitarProPlaybackView: View, Localizable {
             guard playing, frames.indices.contains(step), let track = score.tracks.first(where: { $0.id == trackID }) else { return }
             let sequence = frames
             do {
-                try await audio.prepare(track: track, first: firstBar, last: lastBar, speed: speed)
+                try await audio.prepare(track: track, first: firstBar, last: lastBar, speed: speed, beats: score.beats ?? [])
                 try Task.checkCancellation()
                 audio.volume = Float(volume)
+                audio.metronomeEnabled = metronome
                 try audio.play(from: resumePosition ?? sequence[step].start / speed, looping: looping)
                 resumePosition = nil
                 settle()
@@ -159,6 +166,13 @@ struct GuitarProPlaybackView: View, Localizable {
             } catch is CancellationError { return }
             catch { audioError = error.localizedDescription; playing = false }
         }
+    }
+    private func selectTrackBar(_ id: Int, _ column: Int) {
+        guard let track = score.tracks.first(where: { $0.id == id && $0.supported }) else { return }
+        let bars = ScoreBarSegment.make(frames: track.selection(from: firstBar, through: lastBar))
+        let index = bars.indices.contains(column) ? bars[column].id : 0
+        if id == trackID { seek(index) }
+        else { playing = false; audio.stop(); pendingFrameIndex = index; trackID = id }
     }
     private func seek(_ index: Int) { playing = false; audio.stop(); resumePosition = nil; step = index; playbackPosition = (frame?.start ?? 0) / speed; settle() }
     private func lookAhead(_ index: Int) -> [GuitarNote] {

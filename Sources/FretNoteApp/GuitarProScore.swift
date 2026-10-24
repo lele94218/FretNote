@@ -8,12 +8,18 @@ struct GuitarProScore: Codable, Sendable {
     let tempo: Double
     let barCount: Int
     let tracks: [Track]
+    var beats: [Beat]? = nil
+    struct Beat: Codable, Sendable {
+        let time: Double
+        let accent: Bool
+    }
     struct Track: Codable, Identifiable, Sendable {
         let id: Int
         let name: String
         let supported: Bool
         let frames: [Frame]
         let events: [MIDIEvent]
+        var barActivity: [Int]? = nil
         func selection(from first: Int, through last: Int) -> [Frame] {
             var time = 0.0
             return frames.filter { $0.bar >= first && $0.bar <= last }.map { frame in

@@ -19,17 +19,26 @@ export function parse(bytes) {
         }
         return time+(tick-previous)*60/(960*tempo);
     }
+    const beats=[];
+    for (const bar of bars) {
+        const unit=3840/bar.masterBar.timeSignatureDenominator;
+        for(let tick=bar.start, index=0;tick<bar.end;tick+=unit,index++) {
+            beats.push({time:seconds(tick), accent:index===0});
+        }
+    }
     const tracks=[];
     for(const track of score.tracks) {
         const staff=track.staves[0];
-        if(!staff || staff.isPercussion || staff.tuning.length!==6) continue;
+        if(!staff) continue;
         // This instrument currently models a standard-tuned, 21-fret guitar.
-        const supported=staff.capo===0 && staff.tuning.every((v,i)=>v===[64,59,55,50,45,40][i]);
+        const supported=!staff.isPercussion && staff.tuning.length===6 && staff.capo===0 && staff.tuning.every((v,i)=>v===[64,59,55,50,45,40][i]);
         const frames=[];
+        const barActivity=new Set();
         let lastKey='';
         for(const bar of bars) {
             for(let slice=bar.firstBeat;slice;slice=slice.nextBeat) {
                 const beats=slice.highlightedBeats.filter(x=>x.beat.voice.bar.staff===staff);
+                if(beats.some(x=>x.beat.notes.length)) barActivity.add(bar.masterBar.index+1);
                 const unique=new Map();
                 for(const {beat} of beats) for(const n of beat.notes) {
                     if(n.string<1 || n.string>6 || n.fret<0) continue;
@@ -47,7 +56,6 @@ export function parse(bytes) {
                 lastKey=key;
             }
         }
-        const hasNotes=frames.some(f=>f.notes.length);
         const events = [];
         for (const event of midiFile.tracks[track.index]?.events ?? []) {
             let kind, key=0, value=0;
@@ -60,7 +68,7 @@ export function parse(bytes) {
             else continue;
             events.push({time:seconds(event.tick - midiFile.tickShift),kind,channel:event.channel,key,value});
         }
-        if(hasNotes) tracks.push({id:track.index,name:track.name,supported:supported && frames.every(f=>f.notes.every(n=>n.fret<=21)),frames,events});
+        tracks.push({id:track.index,name:track.name,supported:supported && frames.every(f=>f.notes.every(n=>n.fret<=21)),frames,events,barActivity:[...barActivity]});
     }
-    return JSON.stringify({title:score.title || 'Guitar Pro',tempo:score.tempo,barCount:score.masterBars.length,tracks});
+    return JSON.stringify({title:score.title || 'Guitar Pro',tempo:score.tempo,barCount:score.masterBars.length,tracks,beats});
 }

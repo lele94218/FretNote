@@ -16,6 +16,11 @@ final class GuitarProWorkspaceTests: XCTestCase {
         try store.add(score: score, sourceName: "one.gp5")
         let first = try XCTUnwrap(store.selectedID)
         try store.add(score: score, sourceName: "two.gp5")
+        var updated = score
+        updated.beats = [.init(time: 0, accent: true)]
+        try store.add(score: updated, sourceName: "one.gp5")
+        XCTAssertEqual(store.documents.count, 2, "Upgrading a legacy score should keep its tab")
+        XCTAssertEqual(store.selectedID, first)
         store.select(first)
         let restored = GuitarProWorkspace(file: file)
         XCTAssertEqual(restored.documents.map(\.sourceName), ["one.gp5", "two.gp5"])
