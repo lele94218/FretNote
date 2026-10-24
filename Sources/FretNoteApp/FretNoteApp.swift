@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct FretNoteApp: App, Localizable {
+    @NSApplicationDelegateAdaptor(FretNoteAppDelegate.self) private var appDelegate
     var language: AppLanguage { appearance.language }
     @StateObject private var audio = AudioInput()
     @StateObject private var practice = PracticeStore()
@@ -51,4 +52,8 @@ struct FretNoteApp: App, Localizable {
                 .preferredColorScheme(appearance.theme.colorScheme)
         }
     }
+}
+
+final class FretNoteAppDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 }

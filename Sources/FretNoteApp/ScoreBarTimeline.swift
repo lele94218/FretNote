@@ -34,6 +34,8 @@ struct ScoreBarTimeline: View, Localizable {
     var tracks: [GuitarProScore.Track] = []
     var selectedTrackID: Int = 0
     var selectTrackBar: ((Int, Int) -> Void)? = nil
+    var mutedTracks: Set<Int> = []
+    var toggleMute: ((Int) -> Void)? = nil
     @State private var page = 0
     private var currentID: Int? { segments.last(where: { $0.id <= step })?.id }
     private var currentColumn: Int { segments.lastIndex(where: { $0.id <= step }) ?? 0 }
@@ -55,15 +57,21 @@ struct ScoreBarTimeline: View, Localizable {
                         }
                     }.frame(height: 18 * scale)
                     ForEach(visibleTracks) { track in
-                        Button { selectTrackBar?(track.id, currentColumn) } label: {
-                            Text(track.name).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
-                                .foregroundStyle(track.id == selectedTrackID ? Color.primary : Color.secondary)
-                                .frame(height: rowHeight)
-                                .contentShape(Rectangle())
-                        }.disabled(!track.supported)
-                            .help(track.supported ? track.name : L("此音轨仅显示概览"))
+                        HStack(spacing: 8) {
+                            Button { toggleMute?(track.id) } label: {
+                                Image(systemName: mutedTracks.contains(track.id) ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                                    .frame(width: 20 * scale, height: rowHeight)
+                            }.accessibilityLabel(L(mutedTracks.contains(track.id) ? "取消静音" : "静音") + " " + track.name)
+                                .help(L(mutedTracks.contains(track.id) ? "取消静音" : "静音"))
+                            Button { selectTrackBar?(track.id, currentColumn) } label: {
+                                Text(track.name).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+                                    .foregroundStyle(track.id == selectedTrackID ? Color.primary : Color.secondary)
+                                    .frame(height: rowHeight).contentShape(Rectangle())
+                            }.help(track.name)
+                        }.opacity(mutedTracks.contains(track.id) ? 0.55 : 1)
+
                     }
-                }.frame(width: 125 * scale)
+                }.frame(width: 155 * scale)
             }
             GeometryReader { geometry in
                 let width = min(48 * scale, max(26 * scale, (geometry.size.width - CGFloat(max(0, segments.count - 1)) * 2) / CGFloat(max(1, segments.count))))
@@ -81,7 +89,7 @@ struct ScoreBarTimeline: View, Localizable {
                                                  filled: track.barActivity?.contains(segment.bar) ?? track.frames.contains { $0.bar == segment.bar && !$0.notes.isEmpty },
                                                  selected: track.id == selectedTrackID, width: width) {
                                                 selectTrackBar?(track.id, column)
-                                            }.disabled(!track.supported)
+                                            }
                                         }
                                     }
                                 }.frame(width: width).id(segment.id)

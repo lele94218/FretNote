@@ -12,6 +12,7 @@ struct GuitarInstrumentCanvas: View, Animatable {
     var upcomingPositions: [GuitarNote]? = nil
     var barPositions: [GuitarNote] = []
     var bends: [ScoreBendDisplay] = []
+    var scaleEstimate: ScoreScaleEstimate? = nil
     var animatableData: AnimatablePair<CGFloat, CGFloat> {
         get { AnimatablePair(camera.center, camera.width) }
         set { camera = FretboardCamera(center: newValue.first, width: newValue.second) }
@@ -107,9 +108,9 @@ struct GuitarInstrumentCanvas: View, Animatable {
                 var leader = Path(); leader.move(to: CGPoint(x: x, y: y - radius - 1))
                 leader.addLine(to: CGPoint(x: x, y: labelY + 17 / zoom))
                 context.stroke(leader, with: .color(accent.opacity(0.85)), style: StrokeStyle(lineWidth: 1 / zoom, dash: [2 / zoom, 3 / zoom]))
-                let plate = CGRect(x: x - 34 / zoom, y: labelY - 16 / zoom, width: 68 / zoom, height: 32 / zoom)
+                let plate = CGRect(x: x - 52 / zoom, y: labelY - 16 / zoom, width: 104 / zoom, height: 32 / zoom)
                 context.fill(Path(roundedRect: plate, cornerRadius: 3 / zoom), with: .color(accent))
-                context.draw(Text(note.fullName).font(.editorial(size: 16 / zoom, weight: .semibold)).foregroundColor(.black), at: CGPoint(x: x, y: labelY))
+                context.draw(Text(note.fullName + (scaleEstimate.map { " · " + $0.degree(midi: note.midi) } ?? "")).font(.editorial(size: 16 / zoom, weight: .semibold)).foregroundColor(.black), at: CGPoint(x: x, y: labelY))
             }
             let dot = Path(ellipseIn: CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2))
             // String color identifies pitch lane; fill/rings identify playback state.
@@ -124,6 +125,11 @@ struct GuitarInstrumentCanvas: View, Animatable {
                                                         width: radius * 2 + 4 / zoom, height: radius * 2 + 4 / zoom)),
                                    with: .color(.white), lineWidth: 1.5 / zoom)
                 }
+            }
+            if let scaleEstimate {
+                let degree = scaleEstimate.degree(midi: note.midi)
+                context.draw(Text(degree).font(.editorial(size: radius * (degree.count > 1 ? 0.95 : 1.3), weight: .semibold))
+                    .foregroundColor(relative == 1 ? accent : .black), at: CGPoint(x: x, y: y))
             }
         }
         // The fretting dot follows its displaced string while keeping the same fret.
@@ -141,7 +147,7 @@ struct GuitarInstrumentCanvas: View, Animatable {
             leader.addLine(to: CGPoint(x: labelX, y: rect.maxY))
             context.stroke(leader, with: .color(accent.opacity(0.7)), style: StrokeStyle(lineWidth: 1 / zoom, dash: [2 / zoom, 3 / zoom]))
             context.fill(Path(roundedRect: rect, cornerRadius: 3 / zoom), with: .color(accent))
-            context.draw(Text(bend.pitchLabel).font(.editorial(size: 13 / zoom, weight: .semibold)).foregroundColor(.black), at: CGPoint(x: labelX, y: labelY - 15 / zoom))
+            context.draw(Text(scaleEstimate.map { $0.degree(midi: note.midi) + " → " + $0.degree(midi: note.midi + Int(bend.target.rounded())) } ?? bend.pitchLabel).font(.editorial(size: 13 / zoom, weight: .semibold)).foregroundColor(.black), at: CGPoint(x: labelX, y: labelY - 15 / zoom))
             context.draw(Text((bend.releasing ? "↓ " : "↑ ") + bend.amountLabel).font(.editorial(size: 16 / zoom, weight: .semibold)).foregroundColor(.black), at: CGPoint(x: labelX, y: labelY + 3 / zoom))
             let meter = CGRect(x: labelX - 60 / zoom, y: labelY + 19 / zoom, width: 120 / zoom, height: 3 / zoom)
             context.fill(Path(meter), with: .color(.black.opacity(0.2)))

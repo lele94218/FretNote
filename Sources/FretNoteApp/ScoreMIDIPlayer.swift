@@ -6,9 +6,9 @@ struct MIDIPlaybackPlan: Sendable {
     var duration: Double
     var clicks: [GuitarProScore.Beat] = []
 
-    init(track: GuitarProScore.Track, firstBar: Int, lastBar: Int, speed: Double, beats: [GuitarProScore.Beat] = []) {
+    init(track: GuitarProScore.Track, firstBar: Int, lastBar: Int, speed: Double, beats: [GuitarProScore.Beat] = [], timingTrack: GuitarProScore.Track? = nil) {
         guard speed > 0, speed.isFinite else { events = []; duration = 0; return }
-        let frames = track.frames.filter { $0.bar >= firstBar && $0.bar <= lastBar }
+        let frames = (timingTrack ?? track).frames.filter { $0.bar >= firstBar && $0.bar <= lastBar }
         var spans: [(start: Double, end: Double)] = []
         for frame in frames {
             if let last = spans.last, abs(last.end - frame.start) < 0.000001 {
@@ -114,6 +114,19 @@ final class ScoreMIDIPlayer: ObservableObject {
     private let node = AVAudioPlayerNode()
     private let clickNode = AVAudioPlayerNode()
     private var clickBuffer: AVAudioPCMBuffer?
+    private var stemNodes: [Int: AVAudioPlayerNode] = [:]
+    private var stemBuffers: [Int: AVAudioPCMBuffer] = [:]
+    private var leadID = 0
+    var mutedTracks: Set<Int> = [] { didSet { updateVolumes() } }
+    private func updateVolumes() {
+        // Fixed headroom; muting a track never changes the others' gain.
+        let gain = volume / Float(sqrt(Double(max(1, stemNodes.count + 1))))
+        node.volume = mutedTracks.contains(leadID) ? 0 : gain
+        for (id, stem) in stemNodes { stem.volume = mutedTracks.contains(id) ? 0 : gain }
+        clickNode.volume = metronomeEnabled ? volume : 0
+    }
+    var preparedTrackIDs: Set<Int> { Set(stemNodes.keys).union([leadID]) }
+    func trackGain(_ id: Int) -> Float { id == leadID ? node.volume : (stemNodes[id]?.volume ?? 0) }
     var metronomeEnabled = false { didSet { clickNode.volume = metronomeEnabled ? volume : 0 } }
     private var cacheKey = ""
     private var buffer: AVAudioPCMBuffer?
@@ -123,7 +136,7 @@ final class ScoreMIDIPlayer: ObservableObject {
     private var active = false
     private var generation = 0
     @Published var preparing = false
-    var volume: Float = 0.65 { didSet { node.volume = volume; clickNode.volume = metronomeEnabled ? volume : 0 } }
+    var volume: Float = 0.65 { didSet { updateVolumes() } }
 
     init() {
         engine.attach(node)
@@ -134,8 +147,8 @@ final class ScoreMIDIPlayer: ObservableObject {
         engine.connect(clickNode, to: engine.mainMixerNode, format: format)
         clickNode.volume = 0
     }
-    func prepare(track: GuitarProScore.Track, first: Int, last: Int, speed: Double, beats: [GuitarProScore.Beat] = []) async throws {
-        let key = "\(track.id):\(first):\(last):\(speed)"
+    func prepare(track: GuitarProScore.Track, first: Int, last: Int, speed: Double, beats: [GuitarProScore.Beat] = [], accompaniment: [GuitarProScore.Track] = []) async throws {
+        let key = "\(track.id):\(first):\(last):\(speed):\(accompaniment.map(\.id))"
         if cacheKey == key, buffer != nil { return }
         generation += 1
         let token = generation
@@ -143,16 +156,33 @@ final class ScoreMIDIPlayer: ObservableObject {
         defer { if token == generation { preparing = false } }
         let task = Task.detached(priority: .userInitiated) {
             let plan = MIDIPlaybackPlan(track: track, firstBar: first, lastBar: last, speed: speed, beats: beats)
-            return (try ScoreMIDIRenderer.render(plan), try ScoreMIDIRenderer.metronome(plan))
+            var stems: [Int: AVAudioPCMBuffer] = [:]
+            for other in accompaniment where other.id != track.id {
+                try Task.checkCancellation()
+                stems[other.id] = try ScoreMIDIRenderer.render(MIDIPlaybackPlan(track: other, firstBar: first, lastBar: last, speed: speed, timingTrack: track))
+            }
+            return (try ScoreMIDIRenderer.render(plan), try ScoreMIDIRenderer.metronome(plan), stems)
         }
         let rendered = try await withTaskCancellationHandler(operation: { try await task.value }, onCancel: { task.cancel() })
         try Task.checkCancellation()
         guard token == generation else { throw CancellationError() }
+        stop()
+        for stem in stemNodes.values { engine.detach(stem) }
+        stemNodes = [:]
+        stemBuffers = rendered.2
+        for id in stemBuffers.keys {
+            let stem = AVAudioPlayerNode()
+            engine.attach(stem)
+            engine.connect(stem, to: engine.mainMixerNode, format: rendered.0.format)
+            stemNodes[id] = stem
+        }
+        leadID = track.id
         buffer = rendered.0; clickBuffer = rendered.1; cacheKey = key
+        updateVolumes()
     }
     func play(from seconds: Double, looping: Bool) throws {
         guard let buffer else { return }
-        node.stop(); clickNode.stop()
+        node.stop(); clickNode.stop(); stemNodes.values.forEach { $0.stop() }
         duration = Double(buffer.frameLength) / buffer.format.sampleRate
         startOffset = min(max(0, seconds), max(0, duration - 1 / buffer.format.sampleRate))
         loops = looping
@@ -173,9 +203,11 @@ final class ScoreMIDIPlayer: ObservableObject {
         }
         try schedule(buffer, on: node)
         if let clickBuffer { try schedule(clickBuffer, on: clickNode) }
+        for (id, stem) in stemNodes { if let pcm = stemBuffers[id] { try schedule(pcm, on: stem) } }
         try engine.start()
         let start = AVAudioTime(hostTime: mach_absolute_time() + AVAudioTime.hostTime(forSeconds: 0.02))
-        node.play(at: start); clickNode.play(at: start); active = true
+        node.play(at: start); clickNode.play(at: start)
+        stemNodes.values.forEach { $0.play(at: start) }; active = true
     }
     /// Musical position comes from rendered audio samples, not a wall-clock timer.
     var position: Double {
@@ -189,5 +221,5 @@ final class ScoreMIDIPlayer: ObservableObject {
         let current = position
         try play(from: current, looping: enabled)
     }
-    func stop() { active = false; node.stop(); clickNode.stop(); engine.stop() }
+    func stop() { active = false; node.stop(); clickNode.stop(); stemNodes.values.forEach { $0.stop() }; engine.stop() }
 }

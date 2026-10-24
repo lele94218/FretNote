@@ -44,7 +44,8 @@ final class GuitarProImportTests: XCTestCase {
         guard let output = ProcessInfo.processInfo.environment["FRETNOTE_GP_SNAPSHOT"] else { return }
         _ = NSApplication.shared
         let url = try XCTUnwrap(Bundle.module.url(forResource: "timing", withExtension: "gp5", subdirectory: "Fixtures"))
-        let score = try GuitarProScore.load(url)
+        let snapshotURL = ProcessInfo.processInfo.environment["FRETNOTE_GP_TEST"].map { URL(fileURLWithPath: $0) } ?? url
+        let score = try GuitarProScore.load(snapshotURL)
         let host = NSHostingView(rootView: GuitarProPlaybackView(score: score, close: {})
             .environment(\.appLanguage, .english).environment(\.interfaceScale, 1.75)
             .preferredColorScheme(.light).frame(width: 960, height: 620))

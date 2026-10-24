@@ -42,6 +42,36 @@ final class ScoreMIDITests: XCTestCase {
             XCTAssertEqual(try XCTUnwrap(PitchDetector.detect(samples, sampleRate: 44100, gate: 0.0001)).midi, 69 + 2 * index)
         }
     }
+    @MainActor
+    func testAllStemsPrepareAndMuteWithoutChangingOtherTrackGains() async throws {
+        let url = try XCTUnwrap(Bundle.module.url(forResource: "multitrack", withExtension: "gp", subdirectory: "Fixtures"))
+        let score = try GuitarProScore.load(url)
+        let player = ScoreMIDIPlayer()
+        try await player.prepare(track: score.tracks[0], first: 1, last: 1, speed: 1, accompaniment: score.tracks)
+        XCTAssertEqual(player.preparedTrackIDs, Set(score.tracks.map(\.id)))
+        let leadGain = player.trackGain(0), secondGain = player.trackGain(1)
+        XCTAssertGreaterThan(secondGain, 0)
+        player.mutedTracks = [1]
+        XCTAssertEqual(player.trackGain(1), 0)
+        XCTAssertEqual(player.trackGain(0), leadGain)
+        player.mutedTracks = []
+        XCTAssertEqual(player.trackGain(1), secondGain)
+        player.stop()
+    }
+    func testBassAndDrumsRenderOnSharedGuitarTimeline() throws {
+        let lead = try fixture()
+        for (channel, program, key) in [(0, 33, 40), (9, 0, 36)] {
+            let other = GuitarProScore.Track(id: channel + 10, name: "Accompaniment", supported: false, frames: [], events: [
+                .init(time: 0, kind: 4, channel: channel, key: 0, value: program),
+                .init(time: 0, kind: 1, channel: channel, key: key, value: 100),
+                .init(time: 1, kind: 2, channel: channel, key: key, value: 0)
+            ])
+            let plan = MIDIPlaybackPlan(track: other, firstBar: 1, lastBar: 2, speed: 1, timingTrack: lead)
+            XCTAssertEqual(plan.duration, 8)
+            let buffer = try ScoreMIDIRenderer.render(plan)
+            XCTAssertGreaterThan((0..<4410).map { abs(buffer.floatChannelData![0][$0]) }.max()!, 0.01)
+        }
+    }
     func testRenderedRhythmPitchAndReducedSpeed() throws {
         let track = try fixture()
         XCTAssertTrue(track.events.contains { $0.kind == 6 && $0.value > 8192 })
@@ -122,12 +152,16 @@ final class ScoreMIDITests: XCTestCase {
         guard ProcessInfo.processInfo.environment["FRETNOTE_MIDI_DEVICE_TEST"] == "1" else { throw XCTSkip("Local output device only") }
         let player = ScoreMIDIPlayer()
         player.volume = 0
-        try await player.prepare(track: fixture(), first: 1, last: 2, speed: 1)
+        let source = try fixture()
+        let accompaniment = GuitarProScore.Track(id: 99, name: "Accompaniment", supported: false, frames: source.frames, events: source.events)
+        try await player.prepare(track: fixture(), first: 1, last: 2, speed: 1, accompaniment: [accompaniment])
+        XCTAssertEqual(player.preparedTrackIDs.count, 2)
         try player.play(from: 0, looping: false)
         defer { player.stop() }
         try await Task.sleep(nanoseconds: 300_000_000)
         XCTAssertGreaterThan(player.position, 0.15)
         let before = player.position
+        player.mutedTracks = [99]
         // Audio must progress even while UI work is stalled.
         stallUI()
         XCTAssertGreaterThan(player.position, before + 0.07)

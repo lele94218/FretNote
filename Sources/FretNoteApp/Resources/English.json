@@ -252,5 +252,20 @@
   "无法播放": "Could Not Play",
   "音量": "Volume",
   "无法准备 MIDI 音频，请将播放范围限制在 20 分钟以内": "Could not prepare MIDI audio. Limit the playback range to 20 minutes.",
-  "无法分配音频缓冲区": "Could not allocate the audio buffer."
+  "无法分配音频缓冲区": "Could not allocate the audio buffer.",
+  "静音": "Mute",
+  "取消静音": "Unmute",
+  "推测": "Estimated",
+  "音阶未确定": "Scale undetermined",
+  "按乐句自动分析；音阶外音级以 · 标记": "Analyzed by phrase; · marks a degree outside the estimated scale",
+  "大调": "Major",
+  "自然小调": "Natural minor",
+  "小调五声音阶": "Minor pentatonic",
+  "大调五声音阶": "Major pentatonic",
+  "小调布鲁斯音阶": "Minor blues",
+  "和声小调": "Harmonic minor",
+  "多利亚调式": "Dorian",
+  "混合利底亚调式": "Mixolydian",
+  "利底亚调式": "Lydian",
+  "弗里几亚调式": "Phrygian"
 }

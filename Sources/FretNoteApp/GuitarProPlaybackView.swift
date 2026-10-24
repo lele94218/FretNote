@@ -13,6 +13,9 @@ struct GuitarProPlaybackView: View, Localizable {
     let close: () -> Void
     let repairScore: () -> Void
     @StateObject private var audio = ScoreMIDIPlayer()
+    @State private var scaleEstimates: [Int: ScoreScaleEstimate] = [:]
+    private var scaleEstimate: ScoreScaleEstimate? { scaleEstimates[frame?.bar ?? firstBar] }
+    @State private var mutedTracks: Set<Int> = []
     @State private var metronome = false
     @State private var pendingFrameIndex: Int?
     @State private var volume = 0.65
@@ -67,9 +70,6 @@ struct GuitarProPlaybackView: View, Localizable {
                 if !embedded { Button(L("完成")) { dismiss() }.keyboardShortcut(.cancelAction) }
             }
             HStack(spacing: 12) {
-                Picker(L("音轨"), selection: $trackID) {
-                    ForEach(score.tracks.filter(\.supported)) { Text($0.name).tag($0.id) }
-                }.labelsHidden().frame(maxWidth: 220)
                 Text(L("小节"))
                 TextField("1", value: $firstBar, format: .number).frame(width: 44).accessibilityLabel(L("起始小节"))
                 Text("–")
@@ -81,7 +81,11 @@ struct GuitarProPlaybackView: View, Localizable {
                 Toggle(L("循环"), isOn: $looping).toggleStyle(.checkbox)
             }.textFieldStyle(.roundedBorder)
             HStack {
-                Text(L(audio.preparing ? "正在准备音频…" : "指板跟谱 · MIDI 播放"))
+                if audio.preparing { Text(L("正在准备音频…")) }
+                else if let estimate = scaleEstimate {
+                    Text(estimate.tonicName + " " + L(estimate.kind.rawValue) + " · " + L("推测"))
+                        .help(L("按乐句自动分析；音阶外音级以 · 标记"))
+                } else { Text(L("音阶未确定")) }
                 Spacer()
                 Text(frame?.notes.isEmpty == true ? L("休止") : (frame?.positions.map(\.fullName).joined(separator: " + ") ?? ""))
                 Text(techniques)
@@ -89,11 +93,14 @@ struct GuitarProPlaybackView: View, Localizable {
             }.foregroundStyle(palette.muted).lineLimit(1)
             GuitarInstrumentCanvas(camera: camera, notes: [], current: 0, dark: scheme == .dark,
                                   activePositions: frame?.positions ?? [], upcomingPositions: nextPositions,
-                                  barPositions: ScoreBarPositions.positions(in: frames, at: step), bends: bends)
+                                  barPositions: ScoreBarPositions.positions(in: frames, at: step), bends: bends, scaleEstimate: scaleEstimate)
                 .animation(reduceMotion ? nil : .easeInOut(duration: FretboardPlaybackTimeline.cameraAnimation), value: camera)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             ScoreBarTimeline(segments: ScoreBarSegment.make(frames: frames), step: step,
-                             seek: seek, tracks: score.tracks, selectedTrackID: trackID, selectTrackBar: selectTrackBar)
+                             seek: seek, tracks: score.tracks, selectedTrackID: trackID, selectTrackBar: selectTrackBar,
+                             mutedTracks: mutedTracks, toggleMute: { id in
+                                 if mutedTracks.contains(id) { mutedTracks.remove(id) } else { mutedTracks.insert(id) }
+                             })
             HStack(spacing: 16) {
                 Button { seek(max(0, step - 1)) } label: { Image(systemName: "backward.end") }.accessibilityLabel(L("上一个音"))
                 Button(L(playing ? "暂停" : "播放")) {
@@ -128,6 +135,7 @@ struct GuitarProPlaybackView: View, Localizable {
         .onChange(of: firstBar) { _ in firstBar = max(1, min(score.barCount, firstBar)); lastBar = max(firstBar, lastBar); seek(0) }
         .onChange(of: lastBar) { _ in lastBar = max(firstBar, min(score.barCount, lastBar)); seek(0) }
         .onChange(of: speed) { _ in seek(step) }
+        .onChange(of: mutedTracks) { audio.mutedTracks = $0 }
         .onChange(of: metronome) { audio.metronomeEnabled = $0 }
         .onChange(of: volume) { audio.volume = Float($0) }
         .onChange(of: playing) { if !$0 { audio.stop() } }
@@ -138,12 +146,19 @@ struct GuitarProPlaybackView: View, Localizable {
         .alert(L("无法播放"), isPresented: Binding(get: { audioError != nil }, set: { if !$0 { audioError = nil } })) {
             Button(L("好")) { audioError = nil }
         } message: { Text(L(audioError ?? "")) }
+        .task(id: trackID) {
+            scaleEstimates = [:]
+            let selectedID = trackID
+            let result = await Task.detached(priority: .userInitiated) { ScoreScaleAnalyzer.analyze(score: score, trackID: selectedID) }.value
+            if !Task.isCancelled { scaleEstimates = result }
+        }
         .task(id: playing) {
             guard playing, frames.indices.contains(step), let track = score.tracks.first(where: { $0.id == trackID }) else { return }
             let sequence = frames
             do {
-                try await audio.prepare(track: track, first: firstBar, last: lastBar, speed: speed, beats: score.beats ?? [])
+                try await audio.prepare(track: track, first: firstBar, last: lastBar, speed: speed, beats: score.beats ?? [], accompaniment: score.tracks)
                 try Task.checkCancellation()
+                audio.mutedTracks = mutedTracks
                 audio.volume = Float(volume)
                 audio.metronomeEnabled = metronome
                 try audio.play(from: resumePosition ?? sequence[step].start / speed, looping: looping)
@@ -173,7 +188,13 @@ struct GuitarProPlaybackView: View, Localizable {
         }
     }
     private func selectTrackBar(_ id: Int, _ column: Int) {
-        guard let track = score.tracks.first(where: { $0.id == id && $0.supported }) else { return }
+        guard let track = score.tracks.first(where: { $0.id == id }) else { return }
+        // Bass/drums can seek the shared timeline; the guitar remains the visual guide.
+        guard track.supported else {
+            let bars = ScoreBarSegment.make(frames: frames)
+            if bars.indices.contains(column) { seek(bars[column].id) }
+            return
+        }
         let bars = ScoreBarSegment.make(frames: track.selection(from: firstBar, through: lastBar))
         let index = bars.indices.contains(column) ? bars[column].id : 0
         if id == trackID { seek(index) }
