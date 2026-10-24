@@ -1,10 +1,43 @@
 // Offline parser bridge. alphaTab remains an unmodified MPL-2.0 dependency.
 import { importer, midi, Settings } from './node_modules/@coderline/alphatab/dist/alphaTab.core.mjs';
+// alphaTab 1.8.4 chooses bend OR note vibrato. Compose them in the adapter,
+// keeping the library's bend timing and vibrato settings; never affect other notes.
+class ExpressiveMidiGenerator extends midi.MidiFileGenerator {
+    _generateBend(note, start, duration, key, channel, tempo) {
+        if (!note.vibrato) return super._generateBend(note, start, duration, key, channel, tempo);
+        const handler = this._handler, points = [];
+        this._handler = new Proxy(handler, {get(target, property) {
+            if (property === 'addNoteBend') return (track, tick, channel, key, value) => points.push({track,tick,channel,key,value});
+            const value = target[property];
+            return typeof value === 'function' ? value.bind(target) : value;
+        }});
+        try { super._generateBend(note, start, duration, key, channel, tempo); }
+        finally { this._handler = handler; }
+        if (!points.length) return;
+        points.sort((a,b)=>a.tick-b.tick);
+        const settings = this._settings.player.vibrato;
+        const length = note.vibrato === 2 ? settings.noteWideLength : settings.noteSlightLength;
+        const amplitude = note.vibrato === 2 ? settings.noteWideAmplitude : settings.noteSlightAmplitude;
+        const begin = points[0].tick, end = Math.max(points.at(-1).tick, start + duration.noteOnly);
+        const ticks = new Set(points.map(p=>p.tick));
+        for(let tick=begin;tick<end;tick+=this.vibratoResolution) ticks.add(tick);
+        ticks.add(end);
+        let index=0;
+        for(const tick of [...ticks].sort((a,b)=>a-b)) {
+            while(index+1<points.length && points[index+1].tick<=tick) index++;
+            const a=points[index], b=points[index+1];
+            const base=b && b.tick>a.tick ? a.value+(b.value-a.value)*(tick-a.tick)/(b.tick-a.tick) : a.value;
+            const wave=tick===end ? 0 : amplitude*Math.sin((tick-begin)*Math.PI*2/length);
+            const value=Math.max(0,Math.min(16383,Math.round(base+midi.MidiFileGenerator.getPitchWheel(wave)-8192)));
+            handler.addNoteBend(a.track,tick,a.channel,a.key,value);
+        }
+    }
+}
 export function parse(bytes) {
     const settings = new Settings();
     const score = importer.ScoreLoader.loadScoreFromBytes(new Uint8Array(bytes), settings);
     const midiFile = new midi.MidiFile();
-    const generator = new midi.MidiFileGenerator(score, settings,
+    const generator = new ExpressiveMidiGenerator(score, settings,
         new midi.AlphaSynthMidiFileHandler(midiFile));
     generator.generate();
     const bars = generator.tickLookup.masterBars;
@@ -90,5 +123,5 @@ export function parse(bytes) {
         }
         tracks.push({id:track.index,name:track.name,supported:supported && frames.every(f=>f.notes.every(n=>n.fret<=21)),frames,events,barActivity:[...barActivity]});
     }
-    return JSON.stringify({importVersion:3,title:score.title || 'Guitar Pro',tempo:score.tempo,barCount:score.masterBars.length,tracks,beats});
+    return JSON.stringify({importVersion:4,title:score.title || 'Guitar Pro',tempo:score.tempo,barCount:score.masterBars.length,tracks,beats});
 }

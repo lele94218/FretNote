@@ -159,18 +159,6 @@ struct GuitarInstrumentCanvas: View, Animatable {
             let note = bend.position
             let x = GuitarGeometry.noteX(note.fret)
             let y = GuitarGeometry.stringY(note.string, x: x) + bend.stringDisplacement(at: x)
-            if bend.vibrato {
-                // A short colored ripple identifies vibrato; movement follows the MIDI wheel.
-                var ripple = Path()
-                let amplitude = (2 + min(3, abs(bend.semitones) * 4)) / zoom
-                for sample in 0...32 {
-                    let dx = CGFloat(sample) / 32 * 28 / zoom
-                    let point = CGPoint(x: x + 12 / zoom + dx,
-                        y: y + sin(CGFloat(sample) / 32 * .pi * 4 + CGFloat(bend.semitones) * 4) * amplitude)
-                    if sample == 0 { ripple.move(to: point) } else { ripple.addLine(to: point) }
-                }
-                context.stroke(ripple, with: .color(accent), lineWidth: 2 / zoom)
-            }
             let labelX = camera.center + (CGFloat(index) - CGFloat(bends.count - 1) / 2) * 156 / zoom
             let labelY = max(-110 - 22 / zoom, -visibleHeight / 2 + 34 / zoom)
             let rect = CGRect(x: labelX - 72 / zoom, y: labelY - 29 / zoom, width: 144 / zoom, height: 58 / zoom)

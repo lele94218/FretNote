@@ -99,6 +99,25 @@ final class ScoreBendDisplayTests: XCTestCase {
         let values = (0..<50).compactMap { ScoreBendDisplay.current(track: track, frame: frame, time: Double($0) * 0.01).first?.semitones }
         XCTAssertGreaterThan((values.max() ?? 0) - (values.min() ?? 0), 0.05)
     }
+    func testImportedBendAndVibratoAreCombinedInPlaybackEvents() throws {
+        let url = try XCTUnwrap(Bundle.module.url(forResource: "vibrato", withExtension: "gp", subdirectory: "Fixtures"))
+        let track = try XCTUnwrap(GuitarProScore.load(url).tracks.first)
+        let frame = try XCTUnwrap(track.frames.first { $0.notes.contains { !$0.bend.isEmpty && ($0.vibrato ?? 0) > 0 } })
+        let samples = (1..<100).compactMap { index in
+            ScoreBendDisplay.current(track: track, frame: frame, time: frame.start + (frame.end-frame.start)*Double(index)/100).first
+        }
+        XCTAssertEqual(samples.count, 99)
+        XCTAssertTrue(samples.allSatisfy { $0.vibrato && $0.isBend })
+        XCTAssertTrue(samples.allSatisfy { abs($0.target-2) < 0.001 && $0.amountLabel == "full" })
+        XCTAssertGreaterThan(samples.map(\.semitones).max() ?? 0, 2.05)
+        XCTAssertLessThan(samples.map(\.semitones).min() ?? 100, 1.95)
+        XCTAssertGreaterThan(samples.map(\.semitones).min() ?? 0, 1)
+        // The same imported events drive the synth, not an independent visual sine wave.
+        let plan = MIDIPlaybackPlan(track: track, firstBar: frame.bar, lastBar: frame.bar, speed: 0.5)
+        let pcm = try ScoreMIDIRenderer.render(plan)
+        XCTAssertGreaterThan(pcm.frameLength, 0)
+        XCTAssertGreaterThan((0..<Int(pcm.frameLength)).map { abs(pcm.floatChannelData![0][$0]) }.max() ?? 0, 0.01)
+    }
     func testStringDeflectionKeepsEndpointsFixedAndReturnsWithPitch() {
         let note = GuitarNote(string: 5, fret: 12)
         let peak = ScoreBendDisplay(position: note, semitones: 2, target: 2, releasing: false)

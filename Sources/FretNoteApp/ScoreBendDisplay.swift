@@ -109,7 +109,7 @@ struct ScoreBendDisplay: Equatable {
             }
             let amount = hasWheel || lastChannelWheelTime != nil
                 ? (visualWheel + visualChannelWheel - 16384) / 8192 * (range + cents) : (points.first?.semitones ?? 0)
-            let target = max(points.map(\.semitones).max() ?? (vibrato ? 0.5 : 0), amount)
+            let target = points.map(\.semitones).max() ?? (vibrato ? 0.5 : max(0, amount))
             guard target > 0.01 || vibrato else { return nil }
             return Self(position: position, semitones: amount, target: target, releasing: releasing, vibrato: vibrato, isBend: !points.isEmpty)
         }
