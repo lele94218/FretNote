@@ -14,7 +14,7 @@
 
 ![Endless Rain solo 指板跟谱、音级标记与推弦演示](docs/demo/fretboard-player.gif)
 
-**Endless Rain · solo 第 5–8 小节。** 使用应用指板组件生成的 1440 像素宽、30 fps 预览，GIF 在页面直接播放，无声音；原始谱文件不随项目分发。[下载带 MIDI 声音的视频](https://github.com/lele94218/FretNote/releases/download/v0.4.0/FretNote-solo-preview.mp4) · [试用原创演示谱](docs/demo/fretnote-demo.gp)
+**Endless Rain · solo 第 5–8 小节。** [试用演示谱](docs/demo/fretnote-demo.gp)
 
 ## 核心功能
 
