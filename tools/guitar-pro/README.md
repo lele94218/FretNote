@@ -42,3 +42,5 @@ uses time positions 0â€“12, which the library converts to the binary format's 0â
 Tests also measure rendered pitch at normal and half speed.
 
 `create-gp-bend-fixture.mjs` exports the native `.gp` regression fixture, including an early bend destination with an unused later middle field.
+
+Output-device connections are deferred until playback. Opening the player or preparing PCM does not open the hardware output device.

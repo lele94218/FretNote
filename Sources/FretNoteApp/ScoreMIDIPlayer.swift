@@ -128,6 +128,7 @@ final class ScoreMIDIPlayer: ObservableObject {
     var preparedTrackIDs: Set<Int> { Set(stemNodes.keys).union([leadID]) }
     func trackGain(_ id: Int) -> Float { id == leadID ? node.volume : (stemNodes[id]?.volume ?? 0) }
     var metronomeEnabled = false { didSet { clickNode.volume = metronomeEnabled ? volume : 0 } }
+    private var outputConnected = false
     private var cacheKey = ""
     private var buffer: AVAudioPCMBuffer?
     private var startOffset = 0.0
@@ -141,10 +142,9 @@ final class ScoreMIDIPlayer: ObservableObject {
     init() {
         engine.attach(node)
         engine.attach(clickNode)
-        let format = AVAudioFormat(standardFormatWithSampleRate: ScoreMIDIRenderer.sampleRate, channels: 1)!
-        engine.connect(node, to: engine.mainMixerNode, format: format)
+        // mainMixerNode opens the output device. Defer that hardware call until
+        // playback so a stalled audio driver cannot block the initial window.
         node.volume = volume
-        engine.connect(clickNode, to: engine.mainMixerNode, format: format)
         clickNode.volume = 0
     }
     func prepare(track: GuitarProScore.Track, first: Int, last: Int, speed: Double, beats: [GuitarProScore.Beat] = [], accompaniment: [GuitarProScore.Track] = []) async throws {
@@ -173,15 +173,22 @@ final class ScoreMIDIPlayer: ObservableObject {
         for id in stemBuffers.keys {
             let stem = AVAudioPlayerNode()
             engine.attach(stem)
-            engine.connect(stem, to: engine.mainMixerNode, format: rendered.0.format)
             stemNodes[id] = stem
         }
+        outputConnected = false
         leadID = track.id
         buffer = rendered.0; clickBuffer = rendered.1; cacheKey = key
         updateVolumes()
     }
     func play(from seconds: Double, looping: Bool) throws {
         guard let buffer else { return }
+        if !outputConnected {
+            let mixer = engine.mainMixerNode
+            engine.connect(node, to: mixer, format: buffer.format)
+            engine.connect(clickNode, to: mixer, format: buffer.format)
+            for stem in stemNodes.values { engine.connect(stem, to: mixer, format: buffer.format) }
+            outputConnected = true
+        }
         node.stop(); clickNode.stop(); stemNodes.values.forEach { $0.stop() }
         duration = Double(buffer.frameLength) / buffer.format.sampleRate
         startOffset = min(max(0, seconds), max(0, duration - 1 / buffer.format.sampleRate))
