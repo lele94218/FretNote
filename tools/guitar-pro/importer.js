@@ -1,5 +1,5 @@
-// Offline parser bridge. alphaTab remains an unmodified MPL-2.0 dependency.
-import { importer, midi, Settings } from './node_modules/@coderline/alphatab/dist/alphaTab.core.mjs';
+// Offline parser bridge. The reproducible MPL-2.0 GPIF patch is in build.mjs.
+import { importer, midi, model, Settings } from './node_modules/.fretnote/alphaTab.core.mjs';
 // alphaTab 1.8.4 chooses bend OR note vibrato. Compose them in the adapter,
 // keeping the library's bend timing and vibrato settings; never affect other notes.
 class ExpressiveMidiGenerator extends midi.MidiFileGenerator {
@@ -33,9 +33,40 @@ class ExpressiveMidiGenerator extends midi.MidiFileGenerator {
         }
     }
 }
+// alphaTab 1.8.4 Note.finish classifies bends for engraving and removes
+// intermediate points from three/four-point curves, losing their hold timing.
+// Snapshot before finishing, then restore after the entire score is linked.
+// Parsing is synchronous in a private JS VM; always restore the scoped hook.
+function loadWithBendTiming(bytes, settings) {
+    const finish = model.Note.prototype.finish;
+    const curves = new Map();
+    model.Note.prototype.finish = function (...args) {
+        if (this.bendPoints?.length && !curves.has(this)) {
+            curves.set(this, this.bendPoints.map(p => new model.BendPoint(p.offset, p.value)));
+        }
+        return finish.apply(this, args);
+    };
+    let score;
+    try { score = importer.ScoreLoader.loadScoreFromBytes(new Uint8Array(bytes), settings); }
+    finally { model.Note.prototype.finish = finish; }
+    for (const track of score.tracks) for (const staff of track.staves)
+        for (const bar of staff.bars) for (const voice of bar.voices)
+            for (const beat of voice.beats) for (const note of beat.notes) {
+                const points = curves.get(note) ?? note.bendPoints;
+                if (!points?.length) continue;
+                if (points.some((p, i) => !Number.isFinite(p.offset) || !Number.isFinite(p.value)
+                    || p.offset < 0 || p.offset > model.BendPoint.MaxPosition
+                    || (i > 0 && p.offset < points[i - 1].offset))) {
+                    throw new Error(`Invalid bend timing in bar ${bar.index + 1}. Re-export the source score.`);
+                }
+                note.bendPoints = points;
+            }
+    return score;
+}
+
 export function parse(bytes) {
     const settings = new Settings();
-    const score = importer.ScoreLoader.loadScoreFromBytes(new Uint8Array(bytes), settings);
+    const score = loadWithBendTiming(bytes, settings);
     const midiFile = new midi.MidiFile();
     const generator = new ExpressiveMidiGenerator(score, settings,
         new midi.AlphaSynthMidiFileHandler(midiFile));
@@ -123,5 +154,5 @@ export function parse(bytes) {
         }
         tracks.push({id:track.index,name:track.name,supported:supported && frames.every(f=>f.notes.every(n=>n.fret<=21)),frames,events,barActivity:[...barActivity]});
     }
-    return JSON.stringify({importVersion:4,title:score.title || 'Guitar Pro',tempo:score.tempo,barCount:score.masterBars.length,tracks,beats});
+    return JSON.stringify({importVersion:5,title:score.title || 'Guitar Pro',tempo:score.tempo,barCount:score.masterBars.length,tracks,beats});
 }

@@ -1,0 +1,9 @@
+alphaTab 1.8.4 — Mozilla Public License 2.0
+Upstream source: https://github.com/coderline/alphaTab/tree/v1.8.4
+FretNote source and modifications: https://github.com/lele94218/FretNote/tree/main/tools/guitar-pro
+
+build.mjs records the GPIF parser changes (zero-valued bend midpoints and
+unused midpoint fields beyond the destination). It generates a patched copy
+from the pinned upstream npm package. importer.js preserves bend control points
+and composes bend/vibrato MIDI events. The resulting parser is bundled in this app.
+See alphaTab-LICENSE.txt for the license.

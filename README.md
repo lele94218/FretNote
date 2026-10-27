@@ -22,7 +22,7 @@ Learn the guitar fretboard, practice sight-reading, and follow Guitar Pro scores
 - **Chords & arpeggios** — browse shapes, then practice three-note triads and seventh-chord shells. Arpeggios check notes in order; chord recognition is experimental.
 - **Guitar Pro playback** — import GP3/4/5, GPX or GP files, follow a 21-fret guitar, loop bars and slow down to 25% without changing pitch.
 - **Multitrack audio** — guitar, bass and drums with independent mute controls, a bar grid and a synchronized metronome.
-- **Expressive fretboard** — animated bends, releases and vibrato, including bends with vibrato. Optional scale-degree labels cover the current position; note names remain the default.
+- **Expressive fretboard** — animated bends, releases and vibrato, preserving holds and changes within complex bend curves. Optional scale-degree labels cover the current position; note names remain the default.
 - **Made for Mac** — English / 简体中文, light / dark mode, adjustable text size, and a saved file list that restores on launch.
 
 <details>

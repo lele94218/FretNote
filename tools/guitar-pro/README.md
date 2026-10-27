@@ -10,7 +10,7 @@ npm ci
 npm run build
 ```
 
-alphaTab 1.8.4 is used unmodified under MPL-2.0. Its source is available at https://github.com/coderline/alphaTab/tree/v1.8.4 and in the pinned npm package. The license is bundled in the application as `alphaTab-LICENSE.txt`. The entry point imports the core module to avoid browser initialization. The adapter routes format-0 MIDI events by their original score-track identity, not MIDI container index. Each track’s virtual channels are mapped into 0–15 (preserving percussion channel 9) before synthesis; independent bend channels remain separate. Cached imports are versioned and automatically regenerated from locally archived originals. The adapter uses alphaTab's generated MIDI tick lookup to expand repeats and retain rhythmic timing and tempo changes; the same MIDI generation also supplies note on/off, controller, program and per-note pitch-bend events to the native renderer.
+alphaTab 1.8.4 is used under MPL-2.0. `build.mjs` generates a patched copy without changing the installed npm source: it preserves zero-valued GPIF bend midpoints and ignores unused middle fields beyond the bend destination. The exact source changes are recorded in that script; it fails if the pinned parser no longer matches. Its source is available at https://github.com/coderline/alphaTab/tree/v1.8.4 and in the pinned npm package. The license is bundled in the application as `alphaTab-LICENSE.txt`. The entry point imports the core module to avoid browser initialization. The adapter routes format-0 MIDI events by their original score-track identity, not MIDI container index. Each track’s virtual channels are mapped into 0–15 (preserving percussion channel 9) before synthesis; independent bend channels remain separate. Cached imports are versioned and automatically regenerated from locally archived originals. The adapter uses alphaTab's generated MIDI tick lookup to expand repeats and retain rhythmic timing and tempo changes; the same MIDI generation also supplies note on/off, controller, program and per-note pitch-bend events to the native renderer.
 
 Supported UI input: GP3/4/5, GPX, GP. Rendering currently accepts standard-tuned six-string guitar tracks with no capo, fret 0–21, first staff. Other tracks play as independently mutable accompaniment but cannot guide the guitar fretboard. Meter-aware beat timestamps are exported across repeated bars and tempo changes for the audio-clock metronome. Bends, note/beat vibrato, slides, ties and legato are retained and indicated. Vibrato markers and strings follow interpolated MIDI pitch, including channel-wide beat vibrato. Generated MIDI events drive audio bends and note lengths; bend amount and release indicators follow the same per-note MIDI wheel/RPN pitch range as the synth, with bar-selection and speed offsets accounted for. These are score playback guides, not measured-input judgments. The imported score does not enter learning records.
 
@@ -25,3 +25,20 @@ Audio is rendered to a mono 44.1 kHz PCM buffer on a cancellable worker, then pl
 Use `FRETNOTE_MIDI_DEVICE_TEST=1 swift test --filter ScoreMIDITests` to check the actual output-device clock and looping at zero volume. Offline tests validate waveform pitch (including bends), rest tails, speed, repeats and cut-state restoration without opening an output device.
 
 `multitrack.gp` is an original two-lead regression fixture with four quarter notes per lead, distinct pitches and virtual channels above 15. Tests verify event isolation, sounding pitch on both tracks and automatic cache upgrades.
+
+## Bend timing
+
+The adapter preserves the source bend control points across alphaTab's engraving
+normalization, which otherwise removes intermediate holds from three/four-point
+curves. MIDI synthesis and string animation use these same preserved curves.
+Malformed time positions outside the note's 0–60 coordinate range are rejected
+before MIDI generation. Import version 5 refreshes archived scores automatically.
+
+`complex-bends.gp5` is an original regression fixture for delayed bends, independent
+double bends, fractional pre-bends/releases, tied continuation and combined vibrato.
+`invalid-bend-timing.gp5` deliberately exceeds the valid time range. Regenerate with
+`create-bend-fixtures.py` in a Python environment containing PyGuitarPro; its model
+uses time positions 0–12, which the library converts to the binary format's 0–60.
+Tests also measure rendered pitch at normal and half speed.
+
+`create-gp-bend-fixture.mjs` exports the native `.gp` regression fixture, including an early bend destination with an unused later middle field.

@@ -5,6 +5,6 @@
   },
   "private": true,
   "scripts": {
-    "build": "esbuild importer.js --bundle --format=iife --global-name=FretNoteGP --minify --outfile=../../Sources/FretNoteApp/Resources/GuitarProImporter.js"
+    "build": "node build.mjs"
   }
 }

@@ -27,6 +27,7 @@ struct ScoreBendDisplay: Equatable {
         case 1: return "½"
         case 1.5: return "¾"
         case 2: return "full"
+        case 2.5: return "1¼"
         case 3: return "1½"
         case 4: return "2"
         default: return String(format: "%g", target / 2)

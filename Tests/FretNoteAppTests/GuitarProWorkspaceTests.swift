@@ -50,12 +50,12 @@ final class GuitarProWorkspaceTests: XCTestCase {
         XCTAssertEqual(store.selectedID, id)
         XCTAssertEqual(store.documents.count, 1)
         XCTAssertNotEqual(store.selected?.revision, revision)
-        XCTAssertEqual(store.selected?.score.importVersion, 4)
+        XCTAssertEqual(store.selected?.score.importVersion, 5)
         XCTAssertEqual(store.selected?.score.tracks.count, 2)
         XCTAssertTrue(store.selected!.score.tracks.allSatisfy { !$0.events.isEmpty })
         let restored = GuitarProWorkspace(file: file)
         XCTAssertEqual(restored.selectedID, id)
-        XCTAssertEqual(restored.selected?.score.importVersion, 4)
+        XCTAssertEqual(restored.selected?.score.importVersion, 5)
     }
     @MainActor
     func testFailedSaveDoesNotPretendTheImportWasSaved() throws {
